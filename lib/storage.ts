@@ -77,12 +77,24 @@ export const storage = {
         const topic = topics.find(t => t.id === topicId);
         if (!topic) return;
 
+        console.log('Before update:', {
+            oldMemoryScore: topic.memoryScore,
+            totalAttempts: topic.totalAttempts,
+            newQuizScore: result.score
+        });
+
         // Simple scoring logic: 
         // New Score = (Old Score * attempts + current score) / (attempts + 1)
         // Or just weighted average. Let's keep it simple as per Master Prompt.
-        topic.memoryScore = Math.round((topic.memoryScore * topic.totalAttempts + result.score) / (topic.totalAttempts + 1));
+        const newMemoryScore = Math.round((topic.memoryScore * topic.totalAttempts + result.score) / (topic.totalAttempts + 1));
+        topic.memoryScore = newMemoryScore;
         topic.totalAttempts += 1;
         topic.lastPracticed = new Date();
+
+        console.log('After update:', {
+            newMemoryScore: topic.memoryScore,
+            totalAttempts: topic.totalAttempts
+        });
 
         // Spaced repetition logic (Naive)
         // If score > 80, 3 days. > 60, 1 day. Else, 4 hours.
@@ -96,6 +108,7 @@ export const storage = {
         });
 
         storage.saveTopic(topic);
+        console.log('Topic saved successfully');
     },
 
     deleteTopic: (id: string) => {
@@ -104,9 +117,44 @@ export const storage = {
 
         if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-            // Force a reload or storage event if needed, but managing state in React is better.
-            // For this simple MVP, callers should reload their local state.
         }
+    },
+
+    updateConceptFamiliarity: (topicId: string, conceptId: string, familiar: boolean) => {
+        const topics = storage.getTopics();
+        const topic = topics.find(t => t.id === topicId);
+        if (!topic) return;
+
+        topic.concepts = topic.concepts.map(c =>
+            c.id === conceptId ? { ...c, familiar } : c
+        );
+
+        storage.saveTopic(topic);
+    },
+
+    addCustomConcept: (topicId: string, conceptText: string) => {
+        const topics = storage.getTopics();
+        const topic = topics.find(t => t.id === topicId);
+        if (!topic) return;
+
+        const newConcept: Concept = {
+            id: crypto.randomUUID(),
+            text: conceptText,
+            status: 'neutral',
+            familiar: false
+        };
+
+        topic.concepts.push(newConcept);
+        storage.saveTopic(topic);
+        return newConcept;
+    },
+
+    deleteConcept: (topicId: string, conceptId: string) => {
+        const topics = storage.getTopics();
+        const topic = topics.find(t => t.id === topicId);
+        if (!topic) return;
+
+        topic.concepts = topic.concepts.filter(c => c.id !== conceptId);
+        storage.saveTopic(topic);
     }
 };
-

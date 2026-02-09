@@ -12,6 +12,7 @@ export type Concept = {
     id: string;
     text: string;
     status: 'strong' | 'weak' | 'neutral';
+    familiar?: boolean; // User-marked familiarity
 };
 
 export type QuizQuestion = {

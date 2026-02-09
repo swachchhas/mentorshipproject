@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { storage } from '@/lib/storage';
-import { Topic, Concept, QuizQuestion, QuizResult } from '@/types';
+import { Topic, QuizQuestion, QuizResult } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, ArrowRight, Home as HomeIcon, Brain, Trophy } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CheckCircle2, XCircle, ArrowRight, Home as HomeIcon, Brain, Trophy, Plus, Trash2 } from 'lucide-react';
 import { loadQuiz } from '@/lib/quiz-generator';
 
-
-type Phase = 'review' | 'quiz' | 'result';
+type Phase = 'concepts' | 'quiz' | 'result';
 
 export default function LearnPage() {
     const params = useParams();
@@ -20,8 +20,11 @@ export default function LearnPage() {
     const topicId = params.topicId as string;
 
     const [topic, setTopic] = useState<Topic | null>(null);
-    const [phase, setPhase] = useState<Phase>('review');
+    const [phase, setPhase] = useState<Phase>('concepts');
     const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+
+    // Concepts Selection State
+    const [newConceptText, setNewConceptText] = useState('');
 
     // Quiz State
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -52,11 +55,49 @@ export default function LearnPage() {
             setShowFeedback(false);
             setCorrectCount(0);
             setWeakConcepts(new Set());
-            setPhase('review');
+            setPhase('concepts');
         } else {
             router.push('/');
         }
     }, [topicId, router, selectedConceptId]);
+
+    const handleConceptToggle = (conceptId: string, checked: boolean) => {
+        if (!topic) return;
+        storage.updateConceptFamiliarity(topic.id, conceptId, checked);
+
+        // Update local state
+        setTopic({
+            ...topic,
+            concepts: topic.concepts.map(c =>
+                c.id === conceptId ? { ...c, familiar: checked } : c
+            )
+        });
+    };
+
+    const handleAddConcept = () => {
+        if (!topic || !newConceptText.trim()) return;
+
+        const newConcept = storage.addCustomConcept(topic.id, newConceptText.trim());
+        if (newConcept) {
+            setTopic({
+                ...topic,
+                concepts: [...topic.concepts, newConcept]
+            });
+            setNewConceptText('');
+        }
+    };
+
+    const handleDeleteConcept = (conceptId: string) => {
+        if (!topic) return;
+        // Simple confirm for MVP
+        if (confirm("Delete this concept?")) {
+            storage.deleteConcept(topic.id, conceptId);
+            setTopic({
+                ...topic,
+                concepts: topic.concepts.filter(c => c.id !== conceptId)
+            });
+        }
+    };
 
     const handleStartQuiz = () => {
         if (!quizQuestions.length) {
@@ -94,6 +135,7 @@ export default function LearnPage() {
 
     const nextQuestion = () => {
         if (currentQuestionIndex < quizQuestions.length - 1) {
+            // Immediate transition, no loading
             setCurrentQuestionIndex(prev => prev + 1);
             setShowFeedback(false);
         } else {
@@ -127,61 +169,86 @@ export default function LearnPage() {
         </div>
     );
 
-    // --- VIEW: CONCEPT REVIEW ---
-    if (phase === 'review') {
+    // --- VIEW: CONCEPTS SELECTION ---
+    if (phase === 'concepts') {
         return (
             <div className="min-h-screen bg-background dot-grid">
                 <div className="max-w-2xl mx-auto p-6 lg:p-10 space-y-6">
                     <div className="space-y-2 animate-fade-in">
                         <h1 className="text-2xl lg:text-3xl font-bold">
-                            Review: <span className="text-primary">{topic.name}</span>
+                            What concepts are you familiar with?
                         </h1>
                         <p className="text-muted-foreground">
-                            Refresh your memory before the quiz.
+                            Select the concepts you already know about <span className="text-primary font-medium">{topic.name}</span>
                         </p>
                     </div>
 
-                    {/* Concept Cards */}
-                    <div className="grid gap-3 animate-slide-up delay-100">
-                        {topic.concepts.map((concept, index) => {
-                            const isSelected = selectedConceptId === concept.id;
+                    {/* Concept Checkboxes */}
+                    <Card className="border animate-slide-up delay-100">
+                        <CardContent className="p-6 space-y-4">
+                            {topic.concepts.map((concept) => (
+                                <div key={concept.id} className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/50 transition-colors">
+                                    <Checkbox
+                                        id={concept.id}
+                                        checked={concept.familiar || false}
+                                        onCheckedChange={(checked) => handleConceptToggle(concept.id, checked as boolean)}
+                                        className="mt-0.5"
+                                    />
+                                    <label
+                                        htmlFor={concept.id}
+                                        className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer pt-0.5"
+                                    >
+                                        {concept.text}
+                                        {concept.status !== 'neutral' && (
+                                            <Badge variant="outline" className={`ml-2 ${concept.status === 'strong' ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'}`}>
+                                                {concept.status}
+                                            </Badge>
+                                        )}
+                                    </label>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteConcept(concept.id);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-destructive"
+                                        title="Delete concept"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
 
-                            return (
-                                <button
-                                    key={concept.id}
-                                    onClick={() => setSelectedConceptId(isSelected ? null : concept.id)}
-                                    className="text-left"
+                    {/* Add Custom Concept */}
+                    <Card className="border animate-slide-up delay-200">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Add More Concepts</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                                Know other concepts not listed? Add them here.
+                            </p>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="e.g., List comprehension, Lambda functions..."
+                                    value={newConceptText}
+                                    onChange={(e) => setNewConceptText(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddConcept()}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    onClick={handleAddConcept}
+                                    disabled={!newConceptText.trim()}
+                                    size="icon"
                                 >
-                                    <Card className={`transition-all border ${isSelected ? "border-primary bg-primary/5" : "hover:border-muted-foreground/30"
-                                        }`}>
-                                        <CardContent className="p-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <p className="font-medium">{concept.text}</p>
-                                                    <span className="text-xs text-muted-foreground">Concept {index + 1}</span>
-                                                </div>
-                                                {concept.status !== 'neutral' && (
-                                                    <Badge variant="outline" className={
-                                                        concept.status === 'strong' ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'
-                                                    }>
-                                                        {concept.status}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                    <Plus className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                    {selectedConceptId && (
-                        <p className="text-sm text-primary font-medium">
-                            ✓ Quiz will focus on the selected concept
-                        </p>
-                    )}
-
-                    <div className="pt-4 animate-slide-up delay-200">
+                    <div className="pt-4 animate-slide-up delay-300">
                         <Button size="lg" className="h-12 px-8" onClick={handleStartQuiz}>
                             Start Quiz
                             <ArrowRight className="ml-2 w-4 h-4" />
@@ -196,22 +263,39 @@ export default function LearnPage() {
     if (phase === 'quiz') {
         const question = quizQuestions[currentQuestionIndex];
         if (!question) return <div className="p-8 text-center">No quiz questions found.</div>;
-        const progress = ((currentQuestionIndex) / quizQuestions.length) * 100;
 
         return (
             <div className="min-h-screen bg-background dot-grid">
                 <div className="max-w-2xl mx-auto p-6 lg:p-10 space-y-6 min-h-screen flex flex-col justify-center">
-                    {/* Progress */}
+                    {/* Simplified "Tic-Tac-Toe" Style Progress */}
                     <div className="space-y-2 animate-fade-in">
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>Question {currentQuestionIndex + 1} of {quizQuestions.length}</span>
-                            <span>{Math.round(progress)}%</span>
+                        <div className="flex justify-between items-end mb-2">
+                            <span className="text-sm font-medium text-muted-foreground">Question {currentQuestionIndex + 1} of {quizQuestions.length}</span>
                         </div>
-                        <Progress value={progress} className="h-2" />
+                        <div className="flex gap-1 h-3">
+                            {quizQuestions.map((q, idx) => {
+                                let bgClass = "bg-muted"; // Default future
+                                if (idx < currentQuestionIndex) {
+                                    // Past question
+                                    const answer = answers[q.id];
+                                    const isCorrect = q.type === 'mcq'
+                                        ? answer === q.correctAnswer
+                                        : answer === 'correct';
+                                    bgClass = isCorrect ? "bg-green-500" : "bg-red-500";
+                                } else if (idx === currentQuestionIndex) {
+                                    // Current
+                                    bgClass = "bg-primary animate-pulse";
+                                }
+
+                                return (
+                                    <div key={idx} className={`flex-1 rounded-full transition-all duration-300 ${bgClass}`} />
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Question Card */}
-                    <Card className="border" key={currentQuestionIndex}>
+                    <Card className="border shadow-lg" key={currentQuestionIndex}>
                         <CardHeader className="pb-4">
                             <CardTitle className="text-lg leading-relaxed">{question.question}</CardTitle>
                         </CardHeader>
@@ -222,30 +306,39 @@ export default function LearnPage() {
                                         const isCorrect = option === question.correctAnswer;
                                         const isSelected = answers[question.id] === option;
 
-                                        let buttonClass = "w-full justify-start text-left h-auto py-3 px-4 text-sm border";
+                                        let buttonClass = "w-full justify-start text-left h-auto py-4 px-4 text-sm border-2 transition-all";
+                                        let badgeClass = "mr-3 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0";
 
                                         if (showFeedback) {
                                             if (isCorrect) {
-                                                buttonClass += " bg-green-500 text-white border-green-500";
+                                                buttonClass += " bg-emerald-500 text-white border-emerald-600 shadow-md";
+                                                badgeClass += " bg-white text-emerald-600";
                                             } else if (isSelected) {
-                                                buttonClass += " bg-red-50 border-red-300 text-red-700 dark:bg-red-950 dark:text-red-400";
+                                                buttonClass += " bg-red-100 border-red-300 text-red-900";
+                                                badgeClass += " bg-red-200 text-red-700";
+                                            } else {
+                                                buttonClass += " border-muted bg-muted/20 opacity-60";
+                                                badgeClass += " bg-muted text-muted-foreground";
                                             }
                                         } else {
-                                            buttonClass += " hover:border-primary hover:bg-primary/5";
+                                            buttonClass += " hover:border-primary hover:bg-primary/5 bg-background";
+                                            badgeClass += " bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground";
                                         }
 
                                         return (
                                             <Button
                                                 key={i}
-                                                variant="outline"
+                                                variant="ghost"
                                                 className={buttonClass}
                                                 onClick={() => !showFeedback && handleAnswer(option)}
                                                 disabled={showFeedback}
                                             >
-                                                <span className="mr-3 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                                                <span className={badgeClass}>
                                                     {String.fromCharCode(65 + i)}
                                                 </span>
-                                                {option}
+                                                <span className="font-medium leading-snug break-words text-wrap flex-1">
+                                                    {option}
+                                                </span>
                                             </Button>
                                         );
                                     })}
@@ -255,26 +348,26 @@ export default function LearnPage() {
                             {question.type === 'card' && (
                                 <div className="space-y-4">
                                     {!showFeedback ? (
-                                        <Button className="w-full" variant="secondary" onClick={() => setShowFeedback(true)}>
+                                        <Button className="w-full h-12 text-base" variant="secondary" onClick={() => setShowFeedback(true)}>
                                             Show Answer
                                         </Button>
                                     ) : (
-                                        <div className="bg-muted/50 p-4 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Answer:</p>
-                                            <p>{question.correctAnswer}</p>
+                                        <div className="bg-muted/50 p-6 rounded-xl border animate-in fade-in zoom-in-95">
+                                            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Answer:</p>
+                                            <p className="text-lg font-medium mb-6">{question.correctAnswer}</p>
 
                                             {!answers[question.id] && (
-                                                <div className="flex gap-2 mt-4">
+                                                <div className="flex gap-3">
                                                     <Button
                                                         variant="outline"
-                                                        className="flex-1 border-red-300 text-red-600"
+                                                        className="flex-1 border-red-200 hover:bg-red-50 hover:text-red-600 h-12"
                                                         onClick={() => handleAnswer('incorrect')}
                                                     >
                                                         I forgot
                                                     </Button>
                                                     <Button
                                                         variant="outline"
-                                                        className="flex-1 border-green-300 text-green-600"
+                                                        className="flex-1 border-green-200 hover:bg-green-50 hover:text-green-600 h-12"
                                                         onClick={() => handleAnswer('correct')}
                                                     >
                                                         I remembered
@@ -288,15 +381,16 @@ export default function LearnPage() {
                         </CardContent>
 
                         {((showFeedback && question.type === 'mcq') || (showFeedback && answers[question.id] && question.type === 'card')) && (
-                            <CardFooter className="bg-muted/30 flex justify-between items-center p-4 border-t">
+                            <CardFooter className="bg-muted/30 flex justify-between items-center p-4 border-t rounded-b-xl">
                                 <div className="flex items-center gap-2">
                                     {(question.type === 'mcq' ? answers[question.id] === question.correctAnswer : answers[question.id] === 'correct')
-                                        ? <><CheckCircle2 className="text-green-600 w-4 h-4" /> <span className="text-sm font-medium text-green-600">Correct!</span></>
-                                        : <><XCircle className="text-red-600 w-4 h-4" /> <span className="text-sm font-medium text-red-600">Incorrect</span></>
+                                        ? <><CheckCircle2 className="text-green-600 w-5 h-5" /> <span className="font-semibold text-green-600">Correct!</span></>
+                                        : <><XCircle className="text-red-600 w-5 h-5" /> <span className="font-semibold text-red-600">Incorrect</span></>
                                     }
                                 </div>
-                                <Button size="sm" onClick={nextQuestion}>
-                                    {currentQuestionIndex < quizQuestions.length - 1 ? 'Next' : 'Finish'}
+                                <Button size="default" onClick={nextQuestion} className="font-semibold px-6">
+                                    {currentQuestionIndex < quizQuestions.length - 1 ? 'Next Question' : 'Finish Quiz'}
+                                    <ArrowRight className="w-4 h-4 ml-2" />
                                 </Button>
                             </CardFooter>
                         )}
@@ -324,9 +418,9 @@ export default function LearnPage() {
                 </div>
 
                 <div className="space-y-2 animate-slide-up delay-100">
-                    <h1 className="text-3xl font-bold">Session Complete!</h1>
+                    <h1 className="text-3xl font-bold">Session Complete</h1>
                     <p className="text-muted-foreground">
-                        {isExcellent ? "Outstanding! Your brain is on fire! 🔥" : "Keep practicing. Every attempt makes you stronger."}
+                        {isExcellent ? "Excellent work. You demonstrated strong retention of these concepts." : "Good practice. Regular review strengthens long-term memory."}
                     </p>
                 </div>
 
