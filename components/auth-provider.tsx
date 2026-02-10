@@ -26,11 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        // Check if we are already logged in (persistence logic if needed, 
-        // but USER explicitly said "reset on refresh is acceptable", so we default to false).
-        // However, to make development less painful, I'll use sessionStorage so a simple refresh keeps you logged in,
-        // but closing tab kills it.
-
+        // Check if we are already logged in
         // User Update: "Ensure session resets on refresh (acceptable for MVP)"
         // Okay, strictly following instructions: NO persistence.
         // BUT, that makes the "redirect to login if no session" rule trigger constantly on dev reload.
@@ -40,8 +36,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        if (!isLoading && !isAuthenticated && pathname !== '/login') {
+        if (isLoading) return;
+
+        if (!isAuthenticated && pathname !== '/login') {
             router.push('/login');
+        } else if (isAuthenticated) {
+            const hasCompletedOnboarding = localStorage.getItem('learning_loop_onboarding_completed') === 'true';
+
+            if (pathname === '/login') {
+                // If on login page and authenticated, go to dashboard or onboarding
+                router.push(hasCompletedOnboarding ? '/' : '/onboarding');
+            } else if (pathname === '/onboarding' && hasCompletedOnboarding) {
+                // If trying to access onboarding but already done, go to dashboard
+                router.push('/');
+            } else if (pathname !== '/onboarding' && !hasCompletedOnboarding) {
+                // If trying to access app but haven't done onboarding, go to onboarding
+                router.push('/onboarding');
+            }
         }
     }, [isAuthenticated, isLoading, pathname, router]);
 

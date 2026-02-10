@@ -30,8 +30,19 @@ export function Sidebar() {
     const { logout } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    // Don't show on login page
-    if (pathname === '/login') return null;
+    // Don't show on login page or full-screen immersive flows
+    const hideOnRoutes = [
+        '/login',
+        '/onboarding',
+        '/add-topic',
+    ];
+
+    // Also hide on dynamic quiz/learn routes
+    const shouldHide = hideOnRoutes.includes(pathname) ||
+        pathname.startsWith('/learn/') ||
+        pathname.startsWith('/quiz/');
+
+    if (shouldHide) return null;
 
     const NavContent = () => (
         <div className="flex flex-col h-full">
