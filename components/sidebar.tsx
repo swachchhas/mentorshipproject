@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import {
     Home,
     Activity,
-    Library,
     GraduationCap,
     LogOut,
     Brain,
@@ -21,7 +20,7 @@ import { useState } from 'react';
 const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/cockpit', label: 'Cockpit', icon: Activity },
-    { href: '/content-dump', label: 'Content Dump', icon: Library },
+    { href: '/knowledge-base', label: 'Knowledge Base', icon: Brain },
     { href: '/classroom', label: 'Classroom', icon: GraduationCap, disabled: true },
 ];
 

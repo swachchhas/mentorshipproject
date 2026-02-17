@@ -18,9 +18,43 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Topic } from '@/types';
+import { Topic, Concept } from '@/types';
 
-type Step = 'capture' | 'familiarity' | 'confidence' | 'source' | 'confirmation' | 'exit';
+type Step = 'capture' | 'level' | 'familiarity' | 'confidence' | 'source' | 'confirmation' | 'exit';
+
+// Mock Data for Concepts by Level
+const mockConcepts: Record<string, { beginner: string[], intermediate: string[], expert: string[] }> = {
+    "Python": {
+        beginner: ["Variables", "Loops", "Conditionals", "Functions", "Lists", "Dictionaries"],
+        intermediate: ["Classes", "Methods", "List Comprehension", "Error Handling", "File I/O", "Modules"],
+        expert: ["Decorators", "Generators", "Metaclasses", "Async/Await", "Multithreading", "Context Managers"]
+    },
+    "React": {
+        beginner: ["Components", "Props", "State", "JSX", "Event Handling", "Lists & Keys"],
+        intermediate: ["Hooks (useState, useEffect)", "Context API", "Refs", "Custom Hooks", "Form Handling", "Memoization"],
+        expert: ["Suspense", "Concurrent Mode", "Server Components", "Performance Optimization", "Portals", "Error Boundaries"]
+    },
+    "JavaScript": {
+        beginner: ["Variables", "Data Types", "Operators", "Functions", "Arrays", "Objects"],
+        intermediate: ["Closures", "Promises", "Async/Await", "DOM Manipulation", "Event Listeners", "ES6+ Features"],
+        expert: ["Event Loop", "Prototypes", "Modules", "Web Workers", "Memory Management", "V8 Engine Internals"]
+    }
+};
+
+const getConceptsForLevel = (topic: string, level: 'beginner' | 'intermediate' | 'expert') => {
+    // Try to find exact match
+    const exactMatch = Object.keys(mockConcepts).find(k => k.toLowerCase() === topic.toLowerCase());
+    if (exactMatch) {
+        return mockConcepts[exactMatch][level];
+    }
+    // Default generic concepts if topic not found
+    return [
+        `Basic ${topic} Concepts`,
+        `Core Principles`,
+        `Introductory Terminology`,
+        `Foundational Skills`
+    ];
+};
 
 const confidenceLevels = [
     { value: 1, label: 'Just heard of it', emoji: '🌱' },
@@ -51,11 +85,13 @@ export default function AddTopicPage() {
     const [direction, setDirection] = useState(0);
 
     const [concept, setConcept] = useState('');
+    const [level, setLevel] = useState<'beginner' | 'intermediate' | 'expert' | null>(null);
     const [confidence, setConfidence] = useState<number | null>(null);
     const [source, setSource] = useState<string | null>(null);
     const [showAffirmation, setShowAffirmation] = useState<string | null>(null);
     const [duplicateTopic, setDuplicateTopic] = useState<Topic | null>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+    const [createdTopicId, setCreatedTopicId] = useState<string | null>(null);
 
     // Familiarity Step State
     const [subConcepts, setSubConcepts] = useState<{ id: string; name: string; checked: boolean }[]>([]);
@@ -77,16 +113,24 @@ export default function AddTopicPage() {
             setDuplicateTopic(duplicate);
             setShowDuplicateDialog(true);
         } else {
-            // Generate initial sub-concepts based on the topic name
-            // In a real app, this might call an AI or fetch from database
-            const initial = [
-                { id: '1', name: `Basic principles of ${concept.trim()}`, checked: false },
-                { id: '2', name: `Advanced application of ${concept.trim()}`, checked: false },
-                { id: '3', name: `Common pitfalls in ${concept.trim()}`, checked: false }
-            ];
-            setSubConcepts(initial);
-            nextStep('familiarity');
+            // Proceed to Level Selection
+            nextStep('level');
         }
+    };
+
+    const handleLevelSelect = (selectedLevel: 'beginner' | 'intermediate' | 'expert') => {
+        setLevel(selectedLevel);
+
+        // Generate sub-concepts based on level
+        const concepts = getConceptsForLevel(concept.trim(), selectedLevel);
+        const formattedConcepts = concepts.map((c, i) => ({
+            id: i.toString(),
+            name: c,
+            checked: false
+        }));
+
+        setSubConcepts(formattedConcepts);
+        nextStep('familiarity');
     };
 
     const handleAddSubConcept = () => {
@@ -108,12 +152,58 @@ export default function AddTopicPage() {
         }
     };
 
+    const handleAddConcepts = () => {
+        if (!duplicateTopic) return;
+
+        const topicLevel = duplicateTopic.level || 'beginner';
+        setLevel(topicLevel);
+
+        // 1. Get standard concepts for the level
+        const standardConceptsStrings = getConceptsForLevel(duplicateTopic.name, topicLevel);
+
+        // 2. Get existing concept texts for easier lookup
+        const existingConceptTexts = new Set(duplicateTopic.concepts.map(c => c.text.toLowerCase()));
+
+        // 3. Build subConcepts
+        // Start with standard concepts
+        const combinedSubConcepts: { id: string; name: string; checked: boolean }[] = standardConceptsStrings.map((text, index) => ({
+            id: `std-${index}`,
+            name: text,
+            checked: existingConceptTexts.has(text.toLowerCase())
+        }));
+
+        // Add any existing concepts that were NOT in the standard list (custom ones)
+        // We want to preserve them and show them as checked
+        duplicateTopic.concepts.forEach(c => {
+            const isStandard = standardConceptsStrings.some(s => s.toLowerCase() === c.text.toLowerCase());
+            if (!isStandard) {
+                combinedSubConcepts.push({
+                    id: c.id,
+                    name: c.text,
+                    checked: true // It exists, so it's "checked" in the list
+                });
+            }
+        });
+
+        setSubConcepts(combinedSubConcepts);
+        setShowDuplicateDialog(false);
+        // Skip 'level' selection, go straight to concepts
+        nextStep('familiarity');
+    };
+
     const handleStartFresh = () => {
         if (duplicateTopic) {
             storage.deleteTopic(duplicateTopic.id);
             setDuplicateTopic(null);
             setShowDuplicateDialog(false);
-            nextStep('confidence');
+            // Reset relevant state
+            setLevel(null);
+            setSubConcepts([]);
+            setConfidence(null);
+            setSource(null);
+            setCreatedTopicId(null);
+            // Go to Level selection correctly
+            nextStep('level');
         }
     };
 
@@ -129,22 +219,73 @@ export default function AddTopicPage() {
     };
 
     const submitTopic = () => {
-        if (concept && confidence !== null) {
-            const newTopic = storage.createTopic(concept);
-            newTopic.memoryScore = confidence * 25;
-            storage.saveTopic(newTopic);
+        if (concept && confidence !== null && level) {
+            // Determine if we are updating an existing topic or creating a new one
+            if (duplicateTopic) {
+                // UPDATE existing topic
+                const updatedTopic = { ...duplicateTopic };
+
+                // Map the subConcepts state back to Topic concepts
+                // If it was an existing concept, we update it. If new, we create it.
+                updatedTopic.concepts = subConcepts.map(sc => {
+                    // Try to find existing concept by ID (if it was preserved) or Text
+                    const existing = duplicateTopic.concepts.find(c =>
+                        c.id === sc.id || c.text.toLowerCase() === sc.name.toLowerCase()
+                    );
+
+                    if (existing) {
+                        return { ...existing, familiar: sc.checked };
+                    }
+
+                    // New concept
+                    return {
+                        id: crypto.randomUUID(),
+                        text: sc.name,
+                        status: 'neutral',
+                        familiar: sc.checked
+                    } as Concept;
+                });
+
+                // Update memory score (simple average with new confidence)
+                // confidence is 1-4. memoryScore is 0-100.
+                const newConfidenceScore = confidence * 25;
+                updatedTopic.memoryScore = Math.round((updatedTopic.memoryScore + newConfidenceScore) / 2);
+                updatedTopic.level = level; // Ensure level is consistent
+
+                storage.saveTopic(updatedTopic);
+                setCreatedTopicId(updatedTopic.id);
+
+            } else {
+                // CREATE new topic
+                const initialConcepts = subConcepts.map(sc => ({
+                    id: sc.id,
+                    text: sc.name,
+                    status: 'neutral' as const,
+                    familiar: sc.checked
+                }));
+
+                const newTopic = storage.createTopic(concept, level);
+                newTopic.memoryScore = confidence * 25;
+                // Overwrite concepts with user selection
+                if (initialConcepts.length > 0) {
+                    newTopic.concepts = initialConcepts;
+                }
+
+                storage.saveTopic(newTopic);
+                setCreatedTopicId(newTopic.id);
+            }
         }
         nextStep('exit');
     };
 
-    const handleAddAnother = () => {
-        setConcept('');
-        setConfidence(null);
-        setSource(null);
-        setShowAffirmation(null);
-        setDirection(-1);
-        setCurrentStep('capture');
+    const handleStartQuiz = () => {
+        if (createdTopicId) {
+            router.push(`/learn/${createdTopicId}`);
+        } else {
+            router.push('/');
+        }
     };
+
 
     const variants = {
         enter: (direction: number) => ({
@@ -198,7 +339,7 @@ export default function AddTopicPage() {
                     </div>
                 );
 
-            case 'familiarity':
+            case 'level':
                 return (
                     <div className="flex flex-col items-center text-center space-y-12 max-w-xl mx-auto">
                         <div className="space-y-6">
@@ -206,36 +347,115 @@ export default function AddTopicPage() {
                                 <Sparkles className="w-8 h-8 text-primary" />
                             </div>
                             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-                                What concepts are you familiar with?
+                                Rate yourself in <span className="text-primary">{concept}</span>
                             </h2>
                             <p className="text-xl text-muted-foreground font-light">
-                                Select the concepts you already know about <span className="text-primary font-medium">{concept}</span>
+                                We'll tailor the content to your expertise.
                             </p>
                         </div>
 
-                        <div className="w-full space-y-8">
-                            <div className="bg-card/50 border rounded-3xl p-6 text-left space-y-4 shadow-sm backdrop-blur-sm">
-                                {subConcepts.map((subConcept) => (
-                                    <div
-                                        key={subConcept.id}
-                                        className="flex items-center gap-4 group cursor-pointer"
-                                        onClick={() => toggleSubConcept(subConcept.id)}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl">
+                            {[
+                                { id: 'beginner', label: 'Beginner', desc: 'Just starting out', classes: 'from-green-500/10 to-green-500/5' },
+                                { id: 'intermediate', label: 'Intermediate', desc: 'Comfortable with basics', classes: 'from-blue-500/10 to-blue-500/5' },
+                                { id: 'expert', label: 'Expert', desc: 'Deep understanding', classes: 'from-purple-500/10 to-purple-500/5' }
+                            ].map((lvl) => {
+                                const levelConcepts = getConceptsForLevel(concept.trim(), lvl.id as any);
+                                const previewText = levelConcepts.slice(0, 3).join(', ') + (levelConcepts.length > 3 ? '...' : '');
+
+                                return (
+                                    <button
+                                        key={lvl.id}
+                                        onClick={() => handleLevelSelect(lvl.id as any)}
+                                        className={cn(
+                                            "group relative p-6 rounded-2xl border-2 transition-all duration-300 text-left overflow-hidden",
+                                            "hover:border-primary/50 hover:shadow-lg hover:scale-[1.02]",
+                                            `bg-gradient-to-br ${lvl.classes}`
+                                        )}
                                     >
-                                        <div className={cn(
-                                            "w-6 h-6 rounded border-2 transition-all flex items-center justify-center",
-                                            subConcept.checked ? "bg-primary border-primary" : "border-muted-foreground/30 group-hover:border-primary/50"
-                                        )}>
-                                            {subConcept.checked && <CheckCircle2 className="w-4 h-4 text-primary-foreground" />}
+                                        <div className="flex justify-between items-start relative z-10">
+                                            <div className="space-y-2">
+                                                <div>
+                                                    <div className="text-xl font-bold">{lvl.label}</div>
+                                                    <div className="text-sm text-muted-foreground font-medium">{lvl.desc}</div>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground/80 mt-4 bg-background/50 px-3 py-2 rounded-lg block">
+                                                    <span className="font-semibold block mb-1">Includes:</span>
+                                                    <ul className="list-disc list-inside space-y-0.5">
+                                                        {levelConcepts.slice(0, 4).map((c, i) => (
+                                                            <li key={i} className="truncate">{c}</li>
+                                                        ))}
+                                                        {levelConcepts.length > 4 && <li>+{levelConcepts.length - 4} more</li>}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-background/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ArrowRight className="w-5 h-5 text-primary" />
+                                            </div>
                                         </div>
-                                        <span className={cn(
-                                            "text-lg transition-colors",
-                                            subConcept.checked ? "text-foreground font-medium" : "text-muted-foreground"
-                                        )}>
-                                            {subConcept.name}
-                                        </span>
-                                    </div>
-                                ))}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+
+            case 'familiarity':
+                return (
+                    <div className="flex flex-col items-center text-center space-y-8 max-w-xl mx-auto w-full">
+                        {/* Selected Level Header */}
+                        <div className={cn(
+                            "w-full p-6 rounded-2xl border-2 bg-gradient-to-br text-left relative overflow-hidden",
+                            level === 'beginner' ? 'from-green-500/10 to-green-500/5' :
+                                level === 'intermediate' ? 'from-blue-500/10 to-blue-500/5' :
+                                    'from-purple-500/10 to-purple-500/5'
+                        )}>
+                            <div className="flex justify-between items-center relative z-10">
+                                <div>
+                                    <div className="text-xl font-bold capitalize">{level}</div>
+                                    <div className="text-sm text-muted-foreground">Concepts to review</div>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs hover:bg-background/50"
+                                    onClick={() => setCurrentStep('level')}
+                                >
+                                    Change Level
+                                </Button>
                             </div>
+                        </div>
+
+                        <div className="w-full space-y-6 animate-fade-in-up">
+                            <div className="space-y-4 text-left">
+                                <h3 className="text-lg font-semibold px-1">Select topics to focus on:</h3>
+                                <div className="bg-card/50 border rounded-3xl p-2 shadow-sm backdrop-blur-sm">
+                                    {subConcepts.map((subConcept) => (
+                                        <div
+                                            key={subConcept.id}
+                                            className={cn(
+                                                "flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all hover:bg-accent/50",
+                                                subConcept.checked && "bg-primary/5"
+                                            )}
+                                            onClick={() => toggleSubConcept(subConcept.id)}
+                                        >
+                                            <div className={cn(
+                                                "w-6 h-6 rounded border-2 transition-all flex items-center justify-center flex-shrink-0",
+                                                subConcept.checked ? "bg-primary border-primary" : "border-muted-foreground/30"
+                                            )}>
+                                                {subConcept.checked && <CheckCircle2 className="w-4 h-4 text-primary-foreground" />}
+                                            </div>
+                                            <span className={cn(
+                                                "text-base transition-colors",
+                                                subConcept.checked ? "text-foreground font-medium" : "text-muted-foreground"
+                                            )}>
+                                                {subConcept.name}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
 
                             <div className="bg-card/50 border rounded-3xl p-8 text-left space-y-6 shadow-sm backdrop-blur-sm">
                                 <h3 className="text-xl font-semibold">Add More Concepts</h3>
@@ -426,15 +646,15 @@ export default function AddTopicPage() {
                         <div className="flex flex-col gap-3 w-full max-w-xs">
                             <Button
                                 size="lg"
-                                className="w-full h-14 text-lg rounded-full shadow-sm hover:shadow-md transition-all"
-                                onClick={handleAddAnother}
+                                className="w-full max-w-xs h-14 text-lg rounded-full shadow-sm hover:shadow-md transition-all"
+                                onClick={handleStartQuiz}
                             >
-                                Add Another
+                                Start Quiz <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
                             <Button
                                 variant="outline"
                                 size="lg"
-                                className="w-full h-14 text-lg rounded-full"
+                                className="w-full max-w-xs h-14 text-lg rounded-full"
                                 onClick={() => router.push('/')}
                             >
                                 Back to Dashboard
@@ -483,20 +703,21 @@ export default function AddTopicPage() {
                 {/* Progress Indicators */}
                 {currentStep !== 'exit' && (
                     <div className="flex justify-center gap-2 mt-16">
-                        {['capture', 'familiarity', 'confidence', 'source', 'confirmation'].map((step, index) => {
+                        {['capture', 'familiarity' /* level merged visually */, 'confidence', 'source', 'confirmation'].map((step, index) => {
                             const stepIndex = ['capture', 'familiarity', 'confidence', 'source', 'confirmation'].indexOf(step);
-                            const currentIndex = ['capture', 'familiarity', 'confidence', 'source', 'confirmation'].indexOf(currentStep);
+                            let normalizedCurrentStep = currentStep;
+                            if (currentStep === 'level') normalizedCurrentStep = 'familiarity';
+
+                            const currentIndex = ['capture', 'familiarity', 'confidence', 'source', 'confirmation'].indexOf(normalizedCurrentStep);
 
                             return (
                                 <div
                                     key={step}
                                     className={cn(
                                         "h-1 rounded-full transition-all duration-500 ease-out",
-                                        step === currentStep
+                                        stepIndex <= currentIndex
                                             ? "w-8 bg-primary"
-                                            : stepIndex < currentIndex
-                                                ? "w-1 bg-primary/40"
-                                                : "w-1 bg-muted-foreground/20"
+                                            : "w-1 bg-muted-foreground/20"
                                     )}
                                 />
                             );
@@ -506,40 +727,41 @@ export default function AddTopicPage() {
             </div>
 
             <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
-                <AlertDialogContent className="rounded-3xl border-2">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-2xl font-bold">Topic already exists</AlertDialogTitle>
-                        <AlertDialogDescription className="text-lg">
-                            "{duplicateTopic?.name}" is already in your learning loop. How would you like to proceed?
+                <AlertDialogContent className="rounded-[2rem] border-0 bg-background/95 backdrop-blur-xl shadow-2xl max-w-md p-8">
+                    <AlertDialogHeader className="space-y-4">
+                        <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-2">
+                            <Lightbulb className="w-8 h-8 text-amber-500" />
+                        </div>
+                        <AlertDialogTitle className="text-2xl font-bold text-center">Topic already exists</AlertDialogTitle>
+                        <AlertDialogDescription className="text-center text-lg text-muted-foreground">
+                            "<span className="text-foreground font-semibold">{duplicateTopic?.name}</span>" is already in your learning loop.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-col gap-2">
+                    <AlertDialogFooter className="flex-col sm:flex-col gap-3 mt-8 space-y-2">
                         <Button
-                            className="w-full rounded-full h-12 text-base"
+                            className="w-full rounded-xl h-14 text-lg font-medium shadow-lg hover:shadow-xl transition-all"
                             onClick={handleContinueExisting}
                         >
                             Continue Learning
                         </Button>
                         <Button
-                            variant="outline"
-                            className="w-full rounded-full h-12 text-base"
-                            onClick={handleContinueExisting} // For now, "Add Concepts" is same as "Continue Learning"
+                            variant="secondary"
+                            className="w-full rounded-xl h-14 text-lg font-medium bg-secondary/50 hover:bg-secondary/80"
+                            onClick={handleAddConcepts}
                         >
                             Add New Concepts
                         </Button>
                         <Button
                             variant="ghost"
-                            className="w-full rounded-full h-12 text-base text-destructive hover:text-destructive hover:bg-destructive/5"
+                            className="w-full rounded-xl h-12 text-base text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
                             onClick={handleStartFresh}
                         >
-                            Start Fresh (Delete Existing)
+                            Delete & Start Fresh
                         </Button>
-                        <AlertDialogCancel className="w-full rounded-full h-12 text-base border-none underline">
-                            Cancel
-                        </AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
         </div>
     );
 }

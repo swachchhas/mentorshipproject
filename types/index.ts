@@ -2,6 +2,7 @@ export type Topic = {
     id: string;
     name: string;
     concepts: Concept[];
+    level: 'beginner' | 'intermediate' | 'expert';
     memoryScore: number; // 0-100
     lastPracticed: Date;
     nextReviewDate: Date;

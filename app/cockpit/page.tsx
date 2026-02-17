@@ -8,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Brain, TrendingUp, Clock, AlertCircle, Target, BookOpen, ArrowRight } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 
 export default function CockpitPage() {
     const router = useRouter();
@@ -38,15 +37,36 @@ export default function CockpitPage() {
     }, []);
 
     const getScoreColor = (score: number) => {
-        if (score >= 80) return "text-green-600 dark:text-green-400";
-        if (score >= 60) return "text-yellow-600 dark:text-yellow-400";
+        if (score >= 70) return "text-green-600 dark:text-green-400";
+        if (score >= 40) return "text-yellow-600 dark:text-yellow-400";
         return "text-red-600 dark:text-red-400";
     };
 
-    const getScoreBadge = (score: number) => {
-        if (score >= 80) return <Badge variant="outline" className="text-green-600 border-green-300">Strong</Badge>;
-        if (score >= 60) return <Badge variant="outline" className="text-yellow-600 border-yellow-300">Average</Badge>;
-        return <Badge variant="outline" className="text-red-600 border-red-300">Weak</Badge>;
+    const getScoreBg = (score: number) => {
+        if (score >= 70) return "bg-green-500/10 border-green-500/20";
+        if (score >= 40) return "bg-yellow-500/10 border-yellow-500/20";
+        return "bg-red-500/10 border-red-500/20";
+    };
+
+    const getScoreDot = (score: number) => {
+        if (score >= 70) return "bg-green-500";
+        if (score >= 40) return "bg-yellow-500";
+        return "bg-red-500";
+    };
+
+    const getScoreLabel = (score: number) => {
+        if (score >= 70) return "Strong";
+        if (score >= 40) return "Average";
+        return "Weak";
+    };
+
+    const getRelativeTime = (date: Date) => {
+        const now = new Date();
+        const diffMs = now.getTime() - new Date(date).getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return '1 day ago';
+        return `${diffDays} days ago`;
     };
 
     return (
@@ -121,9 +141,8 @@ export default function CockpitPage() {
                     </Card>
                 </div>
 
-                {/* Main Content */}
-                <div className="grid lg:grid-cols-2 gap-6 animate-slide-up delay-200">
-                    {/* Priority Review */}
+                {/* Priority Review — full width */}
+                <div className="animate-slide-up delay-200">
                     <Card className="border">
                         <CardContent className="p-5">
                             <div className="flex items-center gap-2 mb-4">
@@ -165,49 +184,78 @@ export default function CockpitPage() {
                             )}
                         </CardContent>
                     </Card>
+                </div>
 
-                    {/* Knowledge Base */}
-                    <Card className="border">
-                        <CardContent className="p-5">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Brain className="w-4 h-4 text-primary" />
-                                <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Knowledge Base</span>
-                            </div>
+                {/* Active Topics */}
+                <div className="animate-slide-up delay-300">
+                    <div className="flex items-center gap-2 mb-4">
+                        <BookOpen className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Active Topics</span>
+                    </div>
 
-                            {topics.length === 0 ? (
+                    {topics.length === 0 ? (
+                        <Card className="border">
+                            <CardContent className="p-5">
                                 <div className="text-center py-10 text-muted-foreground">
                                     <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                                    <p className="text-sm">No topics yet. Start learning!</p>
+                                    <p className="font-medium">No topics yet</p>
+                                    <p className="text-sm">Go learn something new to see it here!</p>
                                 </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {topics
-                                        .sort((a, b) => new Date(b.lastPracticed).getTime() - new Date(a.lastPracticed).getTime())
-                                        .slice(0, 5)
-                                        .map(topic => (
-                                            <div
-                                                key={topic.id}
-                                                className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors group cursor-pointer"
-                                                onClick={() => router.push(`/learn/${topic.id}`)}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-2 h-2 rounded-full ${topic.memoryScore >= 80 ? 'bg-green-500' :
-                                                            topic.memoryScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                                        }`} />
-                                                    <div>
-                                                        <p className="font-medium">{topic.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {new Date(topic.lastPracticed).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {topics
+                                .sort((a, b) => new Date(b.lastPracticed).getTime() - new Date(a.lastPracticed).getTime())
+                                .slice(0, 6)
+                                .map(topic => (
+                                    <Card
+                                        key={topic.id}
+                                        className={`border transition-all hover:shadow-md cursor-pointer group ${getScoreBg(topic.memoryScore)}`}
+                                        onClick={() => router.push(`/learn/${topic.id}`)}
+                                    >
+                                        <CardContent className="p-5 space-y-4">
+                                            {/* Topic header */}
+                                            <div className="flex items-start justify-between">
+                                                <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
+                                                    {topic.name}
+                                                </h3>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className={`w-2 h-2 rounded-full ${getScoreDot(topic.memoryScore)}`} />
+                                                    <span className={`text-xl font-bold ${getScoreColor(topic.memoryScore)}`}>
+                                                        {topic.memoryScore}%
+                                                    </span>
                                                 </div>
-                                                {getScoreBadge(topic.memoryScore)}
                                             </div>
-                                        ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+
+                                            {/* Meta */}
+                                            <div className="space-y-1.5 text-xs text-muted-foreground">
+                                                <p>{topic.concepts.length} concepts</p>
+                                                <p>Last practiced {getRelativeTime(topic.lastPracticed)}</p>
+                                            </div>
+
+                                            {/* Score bar */}
+                                            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${topic.memoryScore >= 70 ? 'bg-green-500' : topic.memoryScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                    style={{ width: `${topic.memoryScore}%` }}
+                                                />
+                                            </div>
+
+                                            {/* Footer */}
+                                            <div className="flex items-center justify-between">
+                                                <Badge variant="outline" className={`text-xs ${getScoreColor(topic.memoryScore)}`}>
+                                                    {getScoreLabel(topic.memoryScore)}
+                                                </Badge>
+                                                <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                    Continue Learning <ArrowRight className="w-3 h-3" />
+                                                </span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

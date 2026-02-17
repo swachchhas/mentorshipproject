@@ -14,6 +14,7 @@ const INITIAL_TOPICS: Topic[] = [
         lastPracticed: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
         nextReviewDate: new Date(Date.now() - 1000 * 60 * 60 * 2), // Due now
         totalAttempts: 3,
+        level: 'intermediate'
     },
 ];
 
@@ -50,7 +51,7 @@ export const storage = {
     },
 
     // Create a new topic from just a name
-    createTopic: (name: string): Topic => {
+    createTopic: (name: string, level: 'beginner' | 'intermediate' | 'expert' = 'beginner'): Topic => {
         // In a real app, this would extract concepts. For MVP, we mock them.
         const mockConcepts: Concept[] = [
             { id: crypto.randomUUID(), text: `Basic principles of ${name}`, status: 'neutral' },
@@ -65,7 +66,8 @@ export const storage = {
             memoryScore: 0,
             lastPracticed: new Date(),
             nextReviewDate: new Date(), // Due immediately
-            totalAttempts: 0
+            totalAttempts: 0,
+            level
         };
 
         storage.saveTopic(newTopic);

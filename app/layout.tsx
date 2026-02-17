@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${outfit.variable} font-sans antialiased bg-background`}>
+      <body className={`${outfit.variable} font-sans antialiased bg-background`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

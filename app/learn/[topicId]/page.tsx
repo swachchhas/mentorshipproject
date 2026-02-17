@@ -20,7 +20,7 @@ export default function LearnPage() {
     const topicId = params.topicId as string;
 
     const [topic, setTopic] = useState<Topic | null>(null);
-    const [phase, setPhase] = useState<Phase>('concepts');
+    const [phase, setPhase] = useState<Phase>('quiz');
     const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
     // Concepts Selection State
@@ -41,11 +41,27 @@ export default function LearnPage() {
 
         if (foundTopic) {
             setTopic(foundTopic);
+            // Load quiz immediately with topic's concepts
+            // Filter only familiar concepts if any are marked, otherwise all?
+            // For MVP, if user selected concepts in onboarding, they are saved in topic.concepts with familiar=true
+            // But let's check if any are familiar, if so filter, else use all?
+            // Actually `loadQuiz` takes optional `conceptId`, but here we want a mix.
+            // loadQuiz implementation selects random concepts. 
+            // We should ideally pass familiar ones. 
+            // Current loadQuiz signature: (topicName: string, concepts: Concept[], specificConceptId?: string)
+
             const loadedQuiz = loadQuiz(
                 foundTopic.name,
                 foundTopic.concepts,
                 selectedConceptId ?? undefined
             );
+
+            if (loadedQuiz.length === 0) {
+                // Fallback if no questions generated (e.g. no concepts)
+                // Maybe redirect back or show error?
+                // For now, let it render empty state which handles "No quiz questions found"
+            }
+
             setQuizQuestions(loadedQuiz);
 
             // Reset state
@@ -55,7 +71,7 @@ export default function LearnPage() {
             setShowFeedback(false);
             setCorrectCount(0);
             setWeakConcepts(new Set());
-            setPhase('concepts');
+            setPhase('quiz'); // Ensure phase is quiz
         } else {
             router.push('/');
         }
