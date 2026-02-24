@@ -23,12 +23,6 @@ import { timeframeToDays } from '@/lib/utils/schedule-calculator';
 
 type Step = 'capture' | 'level' | 'timeframe' | 'commitment' | 'source' | 'confirmation' | 'generating' | 'exit';
 
-const confidenceLevels = [
-    { value: 1, label: 'Just heard of it', emoji: '🌱' },
-    { value: 2, label: 'Getting familiar', emoji: '🌿' },
-    { value: 3, label: 'Pretty confident', emoji: '🌳' },
-    { value: 4, label: 'Could teach it', emoji: '🎓' }
-];
 
 const sources = [
     { id: 'book', label: 'Book', icon: BookOpen },
@@ -38,13 +32,6 @@ const sources = [
     { id: 'web', label: 'Web', icon: Globe },
     { id: 'other', label: 'Other', icon: Lightbulb }
 ];
-
-const confidenceAffirmations: Record<number, string> = {
-    1: "A honest starting point.",
-    2: "The gears are turning.",
-    3: "A logical understanding.",
-    4: "Mastery in progress."
-};
 
 const timeframeOptions = [
     { value: '1 week', label: '1 Week', desc: 'Intensive, daily practice' },
@@ -70,7 +57,6 @@ export default function AddTopicPage() {
     const [concept, setConcept] = useState('');
     const [level, setLevel] = useState<'beginner' | 'intermediate' | 'expert' | null>(null);
     const [source, setSource] = useState<string | null>(null);
-    const [showAffirmation, setShowAffirmation] = useState<string | null>(null);
     const [duplicateTopic, setDuplicateTopic] = useState<Topic | null>(null);
     const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
     const [createdTopicId, setCreatedTopicId] = useState<string | null>(null);
@@ -95,7 +81,6 @@ export default function AddTopicPage() {
     const nextStep = (next: Step) => {
         setDirection(1);
         setCurrentStep(next);
-        setShowAffirmation(null);
     };
 
     const handleInitialContinue = async () => {
@@ -222,12 +207,6 @@ export default function AddTopicPage() {
     const handleCommitmentSelect = (value: number) => {
         setDailyCommitment(value);
         setTimeout(() => nextStep('source'), 600);
-    };
-
-    const handleConfidenceSelect = (value: number) => {
-        setConfidence(value);
-        setShowAffirmation(confidenceAffirmations[value]);
-        setTimeout(() => nextStep('source'), 1200);
     };
 
     const handleSourceSelect = (id: string) => {
