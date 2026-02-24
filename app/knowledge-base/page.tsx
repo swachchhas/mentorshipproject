@@ -17,6 +17,22 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+    TooltipProvider,
+} from "@/components/ui/tooltip";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Brain,
     Search,
     BookOpen,
@@ -29,44 +45,81 @@ import {
     ChevronDown,
 } from 'lucide-react';
 
-// Tag system
-const AVAILABLE_TAGS = ["Coding", "Science", "Theory", "Practice", "History", "Math"];
+import { schedulesStorage } from '@/lib/storage/schedules-storage';
+import { quizHistoryStorage, QuizAttempt } from '@/lib/storage/quiz-history-storage';
+import { questionsStorage } from '@/lib/storage/questions-storage';
 
-const TAG_COLORS: Record<string, string> = {
-    "Coding": "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900",
-    "Science": "bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800 dark:hover:bg-green-900",
-    "Theory": "bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800 dark:hover:bg-purple-900",
-    "Practice": "bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800 dark:hover:bg-orange-900",
-    "History": "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900",
-    "Math": "bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900",
-    "General": "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700"
+// ─── Dynamic Tag System ──────────────────────────────────────────────────────
+const LEVEL_TAGS = ['Beginner', 'Intermediate', 'Expert'];
+const LANGUAGE_TAGS = ['C++', 'Python', 'JavaScript', 'TypeScript', 'React', 'HTML', 'CSS', 'Node', 'Java', 'Rust', 'Go'];
+
+// Generate a set of unique tags based on available topics
+const getDynamicTags = (topics: Topic[]) => {
+    const tags = new Set<string>();
+
+    // Always include the levels
+    LEVEL_TAGS.forEach(t => tags.add(t));
+
+    topics.forEach(t => {
+        // Add level tag
+        if (t.level) {
+            tags.add(t.level.charAt(0).toUpperCase() + t.level.slice(1));
+        }
+
+        // Add language/topic tag if it matches known ones
+        const lowerName = t.name.toLowerCase();
+        LANGUAGE_TAGS.forEach(lang => {
+            if (lowerName.includes(lang.toLowerCase())) {
+                tags.add(lang);
+            }
+        });
+
+        // General categories
+        if (lowerName.includes("science") || lowerName.includes("biology") || lowerName.includes("physics")) tags.add("Science");
+        if (lowerName.includes("math") || lowerName.includes("calculus") || lowerName.includes("algebra")) tags.add("Math");
+        if (lowerName.includes("history")) tags.add("History");
+    });
+
+    // Fallback if empty
+    if (tags.size === 0) tags.add("General");
+
+    return Array.from(tags).sort();
 };
 
-// Deterministic tag assignment
-const getDummyTags = (topicName: string) => {
-    const len = topicName.length;
+const getTagsForTopic = (t: Topic): string[] => {
     const tags: string[] = [];
-    if (len % 2 === 0) tags.push("Theory");
-    else tags.push("Practice");
+    if (t.level) tags.push(t.level.charAt(0).toUpperCase() + t.level.slice(1));
 
-    const lower = topicName.toLowerCase();
-    if (lower.includes("react") || lower.includes("code") || lower.includes("python") || lower.includes("javascript")) tags.push("Coding");
-    if (lower.includes("world") || lower.includes("war")) tags.push("History");
-    if (lower.includes("photosynthesis") || lower.includes("biology") || lower.includes("chemistry")) tags.push("Science");
-    if (lower.includes("math") || lower.includes("calculus") || lower.includes("algebra")) tags.push("Math");
+    const lowerName = t.name.toLowerCase();
+    LANGUAGE_TAGS.forEach(lang => {
+        if (lowerName.includes(lang.toLowerCase())) {
+            tags.push(lang);
+        }
+    });
+
+    // Basic heuristics
+    if (lowerName.includes("code") || tags.some(tag => LANGUAGE_TAGS.includes(tag))) tags.push("Coding");
+    if (lowerName.includes("science") || lowerName.includes("biology")) tags.push("Science");
+    if (lowerName.includes("history")) tags.push("History");
+    if (lowerName.includes("math")) tags.push("Math");
 
     if (tags.length === 0) tags.push("General");
+
     return Array.from(new Set(tags));
 };
 
-// Deterministic stats from concept id
-const getDummyConceptStats = (conceptId: string) => {
-    const seed = conceptId.charCodeAt(0) + conceptId.charCodeAt(conceptId.length - 1);
-    return {
-        timesReviewed: 5 + (seed % 15),
-        accuracy: 40 + (seed % 60),
-        lastQuiz: new Date(Date.now() - (seed % 10) * 24 * 60 * 60 * 1000).toLocaleDateString(),
-    };
+const TAG_COLORS: Record<string, string> = {
+    "Beginner": "bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800",
+    "Intermediate": "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+    "Expert": "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
+    "Coding": "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
+    "Science": "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800",
+    "Math": "bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
+    "General": "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+};
+
+const getTagColor = (tag: string) => {
+    return TAG_COLORS[tag] || TAG_COLORS["General"];
 };
 
 type SortOption = 'recency' | 'weak-first' | 'strong-first' | 'alphabetical';
@@ -75,7 +128,7 @@ type EnrichedConcept = Concept & {
     topicId: string;
     topicName: string;
     tags: string[];
-    stats: { timesReviewed: number; accuracy: number; lastQuiz: string };
+    stats: { timesReviewed: number; accuracy: number; lastQuiz: string | null };
 };
 
 export default function KnowledgeBasePage() {
@@ -87,22 +140,60 @@ export default function KnowledgeBasePage() {
     const [sortBy, setSortBy] = useState<SortOption>('recency');
     const [selectedConcept, setSelectedConcept] = useState<EnrichedConcept | null>(null);
     const [showFilters, setShowFilters] = useState(true);
+    const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+    const [isRegenerating, setIsRegenerating] = useState(false);
 
     useEffect(() => {
         setTopics(storage.getTopics());
     }, []);
 
-    // Flatten all concepts with topic metadata
+    // Dynamic tags based on current topics
+    const availableTags = useMemo(() => getDynamicTags(topics), [topics]);
+
+    // Flatten all concepts with topic metadata and REAL stats
     const allConcepts: EnrichedConcept[] = useMemo(() => {
+        const fullHistory = quizHistoryStorage.getAllHistory();
+
         return topics.flatMap(topic => {
-            const tags = getDummyTags(topic.name);
-            return topic.concepts.map(c => ({
-                ...c,
-                topicId: topic.id,
-                topicName: topic.name,
-                tags,
-                stats: getDummyConceptStats(c.id),
-            }));
+            const tags = getTagsForTopic(topic);
+            const topicHistory = fullHistory.filter(h => h.topicId === topic.id);
+
+            return topic.concepts.map(c => {
+                // Filter history that included this concept
+                const conceptAttempts = topicHistory.filter(h =>
+                    h.conceptBreakdown.some(cb => cb.conceptId === c.id)
+                );
+
+                const timesReviewed = conceptAttempts.length;
+
+                // Use the saved retentionScore or calculate an average from history
+                const accuracy = c.retentionScore ?? (timesReviewed > 0
+                    ? Math.round(conceptAttempts.reduce((acc: number, curr) => {
+                        const breakdown = curr.conceptBreakdown.find(cb => cb.conceptId === c.id);
+                        return acc + (breakdown?.score || 0);
+                    }, 0) / timesReviewed)
+                    : 0);
+
+                let lastQuizDateStr: string | null = null;
+                if (timesReviewed > 0) {
+                    const latest = conceptAttempts.sort((a, b) =>
+                        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+                    )[0];
+                    lastQuizDateStr = latest.completedAt;
+                }
+
+                const lastQuiz = lastQuizDateStr
+                    ? new Date(lastQuizDateStr).toLocaleDateString()
+                    : null;
+
+                return {
+                    ...c,
+                    topicId: topic.id,
+                    topicName: topic.name,
+                    tags,
+                    stats: { timesReviewed, accuracy, lastQuiz },
+                };
+            });
         });
     }, [topics]);
 
@@ -184,9 +275,50 @@ export default function KnowledgeBasePage() {
 
     const getAIInsight = (concept: EnrichedConcept) => {
         const { accuracy, timesReviewed } = concept.stats;
-        if (accuracy >= 80) return `Well-understood. Encountered in ${timesReviewed} quiz sessions with ${accuracy}% accuracy.`;
-        if (accuracy >= 60) return `Needs reinforcement. ${accuracy}% accuracy across ${timesReviewed} sessions — consider reviewing key definitions.`;
-        return `Struggling area. Only ${accuracy}% accuracy over ${timesReviewed} sessions. Recommend revisiting fundamentals.`;
+        if (timesReviewed === 0) return `Not reviewed yet. Start a session to generate insights.`;
+        if (accuracy >= 80) return `Well-understood. Encountered in ${timesReviewed} quiz session(s) with ${accuracy}% accuracy.`;
+        if (accuracy >= 60) return `Needs reinforcement. ${accuracy}% accuracy across ${timesReviewed} session(s) — consider reviewing key definitions.`;
+        return `Struggling area. Only ${accuracy}% accuracy over ${timesReviewed} session(s). Recommend revisiting fundamentals.`;
+    };
+
+    const handleRegenerateConceptQuestions = async () => {
+        if (!selectedConcept) return;
+        setIsRegenerating(true);
+        try {
+            const response = await fetch('/api/ai/generate-quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    topic: selectedConcept.topicName,
+                    topicId: selectedConcept.topicId,
+                    concept: selectedConcept.text,
+                    conceptId: selectedConcept.id,
+                    // Note: We might not have the level on the EnrichedConcept directly, fallback to beginner
+                    level: topics.find(t => t.id === selectedConcept.topicId)?.level || 'beginner',
+                    count: 10
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.questions) {
+                    questionsStorage.deleteQuestionsForConcept(selectedConcept.topicId, selectedConcept.id);
+                    questionsStorage.saveQuestions(data.questions);
+
+                    // Redirect to concept quiz
+                    const cid = selectedConcept.id;
+                    const tid = selectedConcept.topicId;
+                    setSelectedConcept(null);
+                    setShowRegenerateDialog(false);
+                    router.push(`/learn/${tid}?conceptId=${cid}`);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to regenerate questions:', error);
+            alert('Failed to generate new questions. Please try again.');
+        } finally {
+            setIsRegenerating(false);
+        }
     };
 
     return (
@@ -223,11 +355,11 @@ export default function KnowledgeBasePage() {
                                     <Tag className="w-3 h-3" /> Filter by tag
                                 </p>
                                 <div className="flex flex-wrap gap-2">
-                                    {AVAILABLE_TAGS.map(tag => (
+                                    {availableTags.map(tag => (
                                         <Badge
                                             key={tag}
                                             variant="outline"
-                                            className={`cursor-pointer transition-all border text-xs ${selectedTags.includes(tag) ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"} ${TAG_COLORS[tag] || TAG_COLORS["General"]}`}
+                                            className={`cursor-pointer transition-all border text-xs ${selectedTags.includes(tag) ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"} ${getTagColor(tag)}`}
                                             onClick={() => toggleTag(tag)}
                                         >
                                             {tag}
@@ -352,7 +484,7 @@ export default function KnowledgeBasePage() {
                                                 </div>
                                                 <div className="flex items-center gap-1 text-muted-foreground">
                                                     <Calendar className="w-3 h-3" />
-                                                    <span>{concept.stats.lastQuiz}</span>
+                                                    <span>{concept.stats.lastQuiz || 'No quizzes yet'}</span>
                                                 </div>
                                                 <div className="flex justify-end">
                                                     {getStatusBadge(concept.status)}
@@ -385,11 +517,11 @@ export default function KnowledgeBasePage() {
                                                     className="flex-1 text-xs"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        router.push(`/learn/${concept.topicId}`);
+                                                        router.push(`/learn/${concept.topicId}/concept/${concept.id}`);
                                                     }}
                                                 >
-                                                    Quiz Again
-                                                    <ArrowRight className="ml-1 w-3 h-3" />
+                                                    Deep Dive
+                                                    <Brain className="ml-1 w-3 h-3" />
                                                 </Button>
                                             </div>
                                         </CardContent>
@@ -401,7 +533,7 @@ export default function KnowledgeBasePage() {
                 </div>
 
                 {/* Concept Detail Modal */}
-                <Dialog open={!!selectedConcept} onOpenChange={(open) => !open && setSelectedConcept(null)}>
+                <Dialog open={!!selectedConcept && !showRegenerateDialog} onOpenChange={(open) => !open && setSelectedConcept(null)}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
@@ -440,7 +572,7 @@ export default function KnowledgeBasePage() {
                                         <span className="text-muted-foreground flex items-center gap-2">
                                             <Calendar className="w-4 h-4" /> Last Quiz
                                         </span>
-                                        <span className="font-medium">{selectedConcept.stats.lastQuiz}</span>
+                                        <span className="font-medium">{selectedConcept.stats.lastQuiz || 'Never'}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm border-b pb-2">
                                         <span className="text-muted-foreground flex items-center gap-2">
@@ -450,6 +582,33 @@ export default function KnowledgeBasePage() {
                                     </div>
                                 </div>
 
+                                {/* Performance History */}
+                                {selectedConcept.stats.timesReviewed > 0 && (
+                                    <div className="space-y-3">
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Recent Performance</p>
+                                        <div className="flex gap-1 h-8 items-end">
+                                            {quizHistoryStorage.getAllHistory()
+                                                .filter(h => h.topicId === selectedConcept.topicId && h.conceptBreakdown.some(cb => cb.conceptId === selectedConcept.id))
+                                                .sort((a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime())
+                                                .slice(-10)
+                                                .map((attempt, i) => {
+                                                    const score = attempt.conceptBreakdown.find(cb => cb.conceptId === selectedConcept.id)?.score || 0;
+                                                    return (
+                                                        <div
+                                                            key={i}
+                                                            className={`flex-1 rounded-sm transition-all hover:opacity-80`}
+                                                            style={{
+                                                                height: `${Math.max(15, score)}%`,
+                                                                backgroundColor: score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : '#ef4444'
+                                                            }}
+                                                            title={`${new Date(attempt.completedAt).toLocaleDateString()}: ${score}%`}
+                                                        />
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* AI Insight */}
                                 <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-lg border border-primary/10">
                                     <p className="text-xs text-primary font-semibold mb-1 uppercase">AI Insight</p>
@@ -458,18 +617,88 @@ export default function KnowledgeBasePage() {
                                     </p>
                                 </div>
 
+                                {/* Common Mistakes */}
+                                {(() => {
+                                    const conceptHistory = quizHistoryStorage.getAllHistory()
+                                        .filter(h => h.topicId === selectedConcept.topicId && h.conceptBreakdown.some(cb => cb.conceptId === selectedConcept.id));
+
+                                    const incorrectQuestions: Record<string, { text: string, count: number }> = {};
+                                    conceptHistory.forEach(attempt => {
+                                        attempt.questions.forEach(q => {
+                                            if (q.conceptId === selectedConcept.id && !q.isCorrect) {
+                                                if (!incorrectQuestions[q.questionId]) {
+                                                    // Note: We'd need to fetch question text from questionsStorage
+                                                    const fullQ = questionsStorage.getQuestions().find(fq => fq.id === q.questionId);
+                                                    if (fullQ) {
+                                                        incorrectQuestions[q.questionId] = { text: fullQ.question, count: 0 };
+                                                    }
+                                                }
+                                                if (incorrectQuestions[q.questionId]) {
+                                                    incorrectQuestions[q.questionId].count++;
+                                                }
+                                            }
+                                        });
+                                    });
+
+                                    const topMistakes = Object.values(incorrectQuestions)
+                                        .sort((a, b) => b.count - a.count)
+                                        .slice(0, 2);
+
+                                    if (topMistakes.length > 0) {
+                                        return (
+                                            <div className="space-y-3">
+                                                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Common Bottlenecks</p>
+                                                <div className="space-y-2">
+                                                    {topMistakes.map((m, i) => (
+                                                        <div key={i} className="text-xs p-3 rounded-lg border bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 flex gap-3">
+                                                            <div className="shrink-0 w-5 h-5 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 font-bold">!</div>
+                                                            <div className="space-y-1">
+                                                                <p className="font-medium text-foreground">{m.text}</p>
+                                                                <p className="text-red-600/70 font-medium">Missed {m.count} time{m.count > 1 ? 's' : ''}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+
                                 {/* Actions */}
                                 <div className="flex gap-2">
-                                    <Button
-                                        className="flex-1"
-                                        onClick={() => {
-                                            setSelectedConcept(null);
-                                            router.push(`/learn/${selectedConcept.topicId}`);
-                                        }}
-                                    >
-                                        Quiz Again
-                                        <ArrowRight className="ml-2 w-4 h-4" />
-                                    </Button>
+                                    <div className="flex-1 flex gap-2">
+                                        <Button
+                                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                            onClick={() => {
+                                                const cid = selectedConcept.id;
+                                                const tid = selectedConcept.topicId;
+                                                setSelectedConcept(null);
+                                                router.push(`/learn/${tid}?conceptId=${cid}`);
+                                            }}
+                                        >
+                                            📝 Quiz This Concept
+                                        </Button>
+
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        disabled={isRegenerating}
+                                                        onClick={() => setShowRegenerateDialog(true)}
+                                                        className="shrink-0 h-10 w-10 text-xl hover:bg-muted"
+                                                    >
+                                                        {isRegenerating ? <span className="animate-spin text-sm">⏳</span> : "🎲"}
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Regenerate questions for this concept</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
                                     <Button variant="outline" onClick={() => setSelectedConcept(null)}>
                                         Close
                                     </Button>
@@ -478,6 +707,31 @@ export default function KnowledgeBasePage() {
                         )}
                     </DialogContent>
                 </Dialog>
+
+                <AlertDialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Regenerate Concept Questions?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will generate new questions specifically for <span className="font-semibold text-foreground">&quot;{selectedConcept?.text}&quot;</span>.
+                                Your current questions and performance history will be saved.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isRegenerating}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleRegenerateConceptQuestions();
+                                }}
+                                disabled={isRegenerating}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                            >
+                                {isRegenerating ? 'Generating...' : 'Generate & Start Quiz'} 🎲
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

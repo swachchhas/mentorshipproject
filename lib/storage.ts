@@ -21,6 +21,13 @@ const INITIAL_TOPICS: Topic[] = [
 const STORAGE_KEY = 'learning-retention-mvp-data';
 
 export const storage = {
+    // Helper to save all topics
+    _saveTopics: (topics: Topic[]) => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(topics));
+        }
+    },
+
     getTopics: (): Topic[] => {
         if (typeof window === 'undefined') return INITIAL_TOPICS;
         const data = localStorage.getItem(STORAGE_KEY);
@@ -52,17 +59,11 @@ export const storage = {
 
     // Create a new topic from just a name
     createTopic: (name: string, level: 'beginner' | 'intermediate' | 'expert' = 'beginner'): Topic => {
-        // In a real app, this would extract concepts. For MVP, we mock them.
-        const mockConcepts: Concept[] = [
-            { id: crypto.randomUUID(), text: `Basic principles of ${name}`, status: 'neutral' },
-            { id: crypto.randomUUID(), text: `Advanced application of ${name}`, status: 'neutral' },
-            { id: crypto.randomUUID(), text: `Common pitfalls in ${name}`, status: 'neutral' },
-        ];
-
+        // Concepts are set by the caller after AI generation
         const newTopic: Topic = {
             id: crypto.randomUUID(),
             name,
-            concepts: mockConcepts,
+            concepts: [],
             memoryScore: 0,
             lastPracticed: new Date(),
             nextReviewDate: new Date(), // Due immediately
@@ -116,9 +117,15 @@ export const storage = {
     deleteTopic: (id: string) => {
         const topics = storage.getTopics();
         const filtered = topics.filter(t => t.id !== id);
+        storage._saveTopics(filtered);
+    },
 
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    updateTopic: function (updatedTopic: Topic): void {
+        const topics = this.getTopics();
+        const index = topics.findIndex(t => t.id === updatedTopic.id);
+        if (index !== -1) {
+            topics[index] = updatedTopic;
+            this._saveTopics(topics);
         }
     },
 

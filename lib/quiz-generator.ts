@@ -17,30 +17,69 @@ export function loadQuiz(
   concepts: Concept[],
   conceptId?: string
 ): QuizQuestion[] {
+  // Try to find the topic in our pre-defined JSON data
   const entry = Object.values(quizData).find(
     (t) => t.displayName.toLowerCase() === topicName.toLowerCase()
   );
 
-  // ---------- JSON-backed questions ----------
+  let questions: QuizQuestion[] = [];
   if (entry) {
-    let questions = entry.questions;
-    // Filter by conceptId if provided
+    questions = entry.questions;
     if (conceptId) {
       questions = questions.filter((q) => q.conceptId === conceptId);
     }
-
-    // If we have enough questions from JSON, return them
-    if (questions.length >= 5) {
-      return questions;
-    }
-
-    // If not enough, supplement with mock questions
-    const mockQuestions = generateMockQuestions(concepts, conceptId, 6 - questions.length);
-    return [...questions, ...mockQuestions];
   }
 
-  // ---------- Mock fallback ----------
-  return generateMockQuestions(concepts, conceptId, 6);
+  // If we don't have enough JSON questions, supplement with mock questions
+  // We'll calculate how many we need to reach at least 6 total
+  const needCount = 6 - questions.length;
+
+  if (needCount > 0) {
+    const mockQuestions = generateMockQuestions(concepts, conceptId, needCount);
+    questions = [...questions, ...mockQuestions];
+  }
+
+  // If this is a Topic Quiz (no conceptId provided), we should roughly weight 
+  // the questions to focus more on weaker concepts
+  if (!conceptId && concepts.length > 0) {
+    return weightQuestionsByConceptWeakness(questions, concepts);
+  }
+
+  return questions;
+}
+
+/**
+ * Reorders and selects questions to prioritize weaker concepts
+ */
+function weightQuestionsByConceptWeakness(questions: QuizQuestion[], concepts: Concept[]): QuizQuestion[] {
+  // Basic implementation: Prioritize concepts with lower retention scores or 'weak' status
+  const conceptScores = new Map<string, number>();
+
+  concepts.forEach(c => {
+    // default to 100 if strong, 50 if neutral/unknown, 0 if weak
+    let score = c.retentionScore;
+    if (score === undefined) {
+      score = c.status === 'weak' ? 0 : c.status === 'strong' ? 100 : 50;
+    }
+    conceptScores.set(c.id, score);
+  });
+
+  // Sort questions: ones belonging to weaker concepts come first
+  // Within the same concept, randomize slightly to keep it varied
+  const sortedQuestions = [...questions].sort((a, b) => {
+    const scoreA = conceptScores.get(a.conceptId) ?? 50;
+    const scoreB = conceptScores.get(b.conceptId) ?? 50;
+
+    if (scoreA !== scoreB) {
+      return scoreA - scoreB; // Lower score comes first
+    }
+
+    // Randomize tie-breakers
+    return Math.random() - 0.5;
+  });
+
+  // Return the top N questions, e.g. up to 10 for a session
+  return sortedQuestions.slice(0, 10);
 }
 
 /**

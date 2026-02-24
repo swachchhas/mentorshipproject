@@ -48,11 +48,9 @@ export function Sidebar() {
             {/* Logo */}
             <div className="p-4 border-b border-border/50">
                 <Link href="/" className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-primary/10 rounded-lg">
-                        <Brain className="w-5 h-5 text-primary" />
-                    </div>
-                    <span className="font-semibold text-lg">
-                        Learning<span className="text-primary">Loop</span>
+                    <Brain className="w-6 h-6 text-primary" />
+                    <span className="font-bold text-xl tracking-tight">
+                        Memora
                     </span>
                 </Link>
             </div>

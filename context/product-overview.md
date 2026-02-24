@@ -1,8 +1,8 @@
-# LearningLoop — Product Overview
+# Memora — Product Overview
 
 > **A spaced-repetition learning platform that helps students capture what they learn and remember it forever.**
 
-LearningLoop is a **Next.js 14** web application with a desktop-first, AI-platform-inspired UI. Data is persisted in the browser via **localStorage**. Authentication is demo-mode (no real backend). The app uses the **Outfit** font, supports light/dark themes, and renders a persistent sidebar navigation on non-immersive pages.
+Memora is a **Next.js 14** web application with a desktop-first, AI-platform-inspired UI. Data is persisted in the browser via **localStorage**. Authentication is demo-mode (no real backend). The app uses the **Outfit** font, supports light/dark themes, and renders a persistent sidebar navigation on non-immersive pages.
 
 ---
 

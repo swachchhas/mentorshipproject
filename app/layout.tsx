@@ -3,6 +3,7 @@ import { Outfit } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { Sidebar } from "@/components/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -11,7 +12,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "LearningLoop",
+  title: "Memora",
   description: "A student learning platform for durable memory.",
 };
 
@@ -30,12 +31,14 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="flex min-h-screen">
-              <Sidebar />
-              <main className="flex-1 overflow-auto">
-                {children}
-              </main>
-            </div>
+            <TooltipProvider>
+              <div className="flex min-h-screen">
+                <Sidebar />
+                <main className="flex-1 overflow-auto">
+                  {children}
+                </main>
+              </div>
+            </TooltipProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

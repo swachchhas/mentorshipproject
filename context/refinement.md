@@ -1,569 +1,624 @@
-# LearningLoop — Page Restructure & Redesign
-## Separating Cockpit, Content Dump, and Knowledge Base
+# Quiz Action UI/UX Design
+## Elegant Quiz Controls with Icon-Based Actions
 
-**Version:** 2.0  
-**Date:** February 2026  
-**Purpose:** Clear separation of concerns with optimized user experience
-
----
-
-## 🎯 Core Philosophy
-
-**The Hierarchy:**
-```
-User
-  └── Topics (2-3 active at once) ← Cockpit level
-       └── Concepts (many per topic) ← Knowledge Base level
-            └── Quiz Sessions ← Knowledge Base detail
-```
-
-**Key Insight:** Users learn few topics but many concepts. The UI should reflect this by:
-- Making **Cockpit** topic-centric (high-level overview)
-- Making **Knowledge Base** concept-centric (deep dive into learning)
-- Making **Content Dump** a filtering feature, not a standalone page
+**Purpose:** Design intuitive quiz action controls that don't clutter the UI with multiple buttons  
+**Philosophy:** Primary action is prominent, secondary actions are discoverable via icons with tooltips
 
 ---
 
-## 📊 Page-by-Page Breakdown
+## 🎯 Core Requirements
 
-### 1️⃣ **COCKPIT** — Your Learning Dashboard
-**Route:** `/cockpit`  
-**Icon:** Activity (pulse/dashboard icon)  
-**Purpose:** High-level overview of learning progress and health
+### 1. **Cockpit - Topic Card Enhancement**
+**Add:** Display difficulty level (Beginner/Intermediate/Expert) on topic card
 
-#### What It Shows:
-```
-┌─────────────────────────────────────────────────────────────┐
-│  🏠 Cockpit                                                  │
-│  Your learning progress at a glance                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │    4     │  │   57%    │  │    4     │  │    8     │   │
-│  │  Topics  │  │ Avg. Mem │  │   Due    │  │ Sessions │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│                                                              │
-│  ┌──────────────────── PRIORITY REVIEW ──────────────────┐ │
-│  │                                                         │ │
-│  │  ⚠️ python                          [Review →]        │ │
-│  │     Review overdue                                     │ │
-│  │                                                         │ │
-│  │  ⚠️ photosynthesis                  [Review →]        │ │
-│  │     Review overdue                                     │ │
-│  │                                                         │ │
-│  │  ⚠️ leadership training             [Review →]        │ │
-│  │     Review overdue                                     │ │
-│  │                                                         │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                                                              │
-│  ┌──────────────────── ACTIVE TOPICS ────────────────────┐ │
-│  │                                                         │ │
-│  │  ┌─────────────────────────────────────────────────┐  │ │
-│  │  │ 📚 python                               34% 🔴  │  │ │
-│  │  │ 12 concepts • Last practiced 2 days ago         │  │ │
-│  │  │ [Continue Learning →]                            │  │ │
-│  │  └─────────────────────────────────────────────────┘  │ │
-│  │                                                         │ │
-│  │  ┌─────────────────────────────────────────────────┐  │ │
-│  │  │ 🧬 photosynthesis                      59% 🟡  │  │ │
-│  │  │ 3 concepts • Last practiced 5 days ago          │  │ │
-│  │  │ [Continue Learning →]                            │  │ │
-│  │  └─────────────────────────────────────────────────┘  │ │
-│  │                                                         │ │
-│  │  ┌─────────────────────────────────────────────────┐  │ │
-│  │  │ 💼 leadership training                82% 🟢  │  │ │
-│  │  │ 8 concepts • Last practiced 1 day ago           │  │ │
-│  │  │ [Continue Learning →]                            │  │ │
-│  │  └─────────────────────────────────────────────────┘  │ │
-│  │                                                         │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+### 2. **Cockpit - Topic Modal Quiz Actions**
+**Current:** Only "Start Topic Quiz" button  
+**New:** 
+- First time: "Start Topic Quiz" (primary)
+- After first quiz: "Redo Quiz" (primary) + 🎲 Regenerate icon (secondary)
 
-#### Features:
-- **4 Stat Cards** (existing): Total Topics, Avg Memory %, Due Count, Sessions
-- **Priority Review Panel**: Shows overdue topics with direct "Review" CTA
-- **Active Topics Panel**: Topic-level cards showing:
-  - Topic name with emoji/icon
-  - Overall memory score with color indicator (🔴 weak / 🟡 average / 🟢 strong)
-  - Concept count
-  - Last practiced timestamp
-  - "Continue Learning" button → `/learn/[topicId]`
-
-#### Navigation:
-- Clicking "Review" → Takes to `/learn/[topicId]` (quiz flow)
-- Clicking "Continue Learning" → Takes to `/learn/[topicId]` (quiz flow)
-- No concept-level detail here (that's Knowledge Base territory)
-
-#### Design Notes:
-- Clean, spacious, not overwhelming
-- Topic cards use soft gradients based on memory score
-- Color system: Red <40%, Yellow 40-70%, Green >70%
-- Maximum 6 topics shown (typical user has 2-3)
+### 3. **Knowledge Base - Concept Card Quiz Actions**
+**Current:** Only "Quiz Again" button  
+**New:** "Quiz Concept" (primary) + 🎲 Regenerate icon (secondary)
 
 ---
 
-### 2️⃣ **KNOWLEDGE BASE** — Your Second Brain
-**Route:** `/knowledge-base`  
-**Icon:** Brain or BookOpen  
-**Purpose:** Concept-centric deep dive into everything learned
+## 🎨 Design Solution: Icon + Tooltip Pattern
 
-#### What It Shows:
-```
-┌─────────────────────────────────────────────────────────────┐
-│  🧠 Knowledge Base                     [🔍 Search concepts] │
-│  Your second brain — everything you've learned              │
-├──────────────┬──────────────────────────────────────────────┤
-│              │                                               │
-│ 📂 All (47)  │  ┌─── CONCEPT OVERVIEW ───────────────────┐ │
-│              │  │                                          │ │
-│ Filters ▼    │  │  Showing 47 concepts across 4 topics    │ │
-│              │  │                                          │ │
-│ 💻 Coding(15)│  └──────────────────────────────────────────┘ │
-│ 🔬 Science(8)│                                               │
-│ 📖 Theory(12)│  ┌────────────────────────────────────────┐  │
-│ 🏃 Practice  │  │ 🐍 Variables and Data Types             │  │
-│ 📜 History   │  │ from Python                        98% │  │
-│ ➕ Math      │  │                                          │  │
-│              │  │ 📊 Reviewed: 18 times                   │  │
-│ Sort by ▼    │  │ ✅ Accuracy: 98%                        │  │
-│ • Recency    │  │ 📅 Last Quiz: 2/8/2026                  │  │
-│ • Accuracy   │  │ 💪 Status: STRONG                       │  │
-│ • Weak First │  │                                          │  │
-│              │  │ 💡 AI Insight: Well-understood. User    │  │
-│              │  │ has encountered this in 18 sessions.    │  │
-│              │  │                                          │  │
-│              │  │ [View Sessions →] [Quiz Again →]       │  │
-│              │  └────────────────────────────────────────┘  │
-│              │                                               │
-│              │  ┌────────────────────────────────────────┐  │
-│              │  │ 🌿 Light-dependent reactions            │  │
-│              │  │ from Photosynthesis               67% │  │
-│              │  │                                          │  │
-│              │  │ 📊 Reviewed: 5 times                    │  │
-│              │  │ ✅ Accuracy: 67%                        │  │
-│              │  │ 📅 Last Quiz: 1/30/2026                 │  │
-│              │  │ ⚡ Status: AVERAGE                      │  │
-│              │  │                                          │  │
-│              │  │ 💡 AI Insight: Needs reinforcement.     │  │
-│              │  │                                          │  │
-│              │  │ [View Sessions →] [Quiz Again →]       │  │
-│              │  └────────────────────────────────────────┘  │
-│              │                                               │
-│              │  ┌────────────────────────────────────────┐  │
-│              │  │ 🔄 Control flow and loops               │  │
-│              │  │ from Python                        34% │  │
-│              │  │                                          │  │
-│              │  │ 📊 Reviewed: 12 times                   │  │
-│              │  │ ❌ Accuracy: 34%                        │  │
-│              │  │ 📅 Last Quiz: 2/4/2026                  │  │
-│              │  │ ⚠️ Status: WEAK                         │  │
-│              │  │                                          │  │
-│              │  │ 💡 AI Insight: Struggling. Consider     │  │
-│              │  │ reviewing fundamentals.                 │  │
-│              │  │                                          │  │
-│              │  │ [View Sessions →] [Quiz Again →]       │  │
-│              │  └────────────────────────────────────────┘  │
-│              │                                               │
-└──────────────┴──────────────────────────────────────────────┘
-```
+### Design Philosophy
 
-#### Left Sidebar — Content Dump (Filter Panel):
-This is where the "Content Dump" lives — as a filtering mechanism, not a page.
+**Primary Action = Button**  
+The most common action stays as a prominent button
+- First quiz: "Start Topic Quiz"
+- After quiz: "Redo Quiz" / "Quiz Concept"
 
-**Filters:**
-- **Tag Filters** (Coding, Science, Theory, Practice, History, Math)
-  - Shows count next to each tag
-  - Click to filter concepts by tag
-  - Multi-select enabled (AND logic: show concepts tagged with both Science AND Theory)
-  
-- **Topic Filters** (Optional dropdown)
-  - "From Python"
-  - "From Photosynthesis"
-  - "From Leadership Training"
+**Secondary Action = Icon with Tooltip**  
+Less common but important actions become icons
+- 🎲 Dice icon for "Regenerate Questions"
+- Appears on hover/focus
+- Shows descriptive tooltip
 
-- **Sort Options:**
-  - Recency (most recently practiced)
-  - Accuracy (weak first, strong first)
-  - Alphabetical
-
-#### Main Content Area — Concept Cards:
-Each concept card shows:
-- **Concept name** with emoji
-- **Parent topic** (small text)
-- **Memory score** with color indicator
-- **Stats:** 
-  - Times reviewed (quiz session count)
-  - Accuracy %
-  - Last quiz date
-  - Status badge (Strong / Average / Weak)
-- **AI Insight** (future feature): 
-  - "Well-understood. User has encountered this in 18 sessions."
-  - "Needs reinforcement. Consider reviewing fundamentals."
-- **Actions:**
-  - "View Sessions" → Opens modal/detail view with session history
-  - "Quiz Again" → `/learn/[topicId]` (filtered to this concept)
-
-#### Concept Detail Modal (Click "View Sessions"):
-```
-┌────────────────────────────────────────────────────────┐
-│ 🔍 Concept Details                               [✕]  │
-│ Detailed analytics for "Light-dependent reactions"     │
-├────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌──────────┐         ┌──────────┐                    │
-│  │    18    │         │   98%    │                    │
-│  │ REVIEWED │         │ ACCURACY │                    │
-│  └──────────┘         └──────────┘                    │
-│                                                         │
-│  📅 Last Quiz: 2/8/2026                                │
-│  💪 Status: STRONG                                     │
-│                                                         │
-│  ┌─── AI INSIGHT ────────────────────────────────────┐ │
-│  │ This concept seems well-understood. User has       │ │
-│  │ encountered this in 18 separate quiz sessions.     │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                         │
-│  ┌─── QUIZ HISTORY ───────────────────────────────────┐│
-│  │                                                     ││
-│  │  📝 Session #18 — 2/8/2026                         ││
-│  │     Q: What is the primary output of light...     ││
-│  │     A: ATP and NADPH ✅                            ││
-│  │                                                     ││
-│  │  📝 Session #17 — 2/4/2026                         ││
-│  │     Q: Where do light-dependent reactions occur?   ││
-│  │     A: Thylakoid membrane ✅                       ││
-│  │                                                     ││
-│  │  📝 Session #16 — 2/1/2026                         ││
-│  │     Q: What is the role of chlorophyll?            ││
-│  │     A: Absorbs light energy ✅                     ││
-│  │                                                     ││
-│  │  [Load More Sessions...]                           ││
-│  │                                                     ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                         │
-│  ┌─── KEYWORD TRACKING (FUTURE) ──────────────────────┐│
-│  │                                                     ││
-│  │  ✅ thylakoid    ✅ ATP         ✅ NADPH          ││
-│  │  ✅ chlorophyll  ✅ photon      ❌ stroma         ││
-│  │  ✅ electron     ❌ chemiosmosis                   ││
-│  │                                                     ││
-│  │  Green = mentioned in answers                      ││
-│  │  Red = not yet mentioned                           ││
-│  │                                                     ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                         │
-│                               [Close]                   │
-└────────────────────────────────────────────────────────┘
-```
-
-#### Future Features (Post-MVP):
-**1. Voice Answers + Keyword Mapping:**
-- User answers via voice
-- AI transcribes and extracts keywords
-- Score generated based on keyword presence
-- Keywords tracked: ✅ mentioned / ❌ missing
-
-**2. Auto-Generated Notes:**
-- AI synthesizes notes from user's answers across all sessions
-- "Based on your answers, here's what you know about this concept..."
-- Highlights gaps (keywords never mentioned)
-
-**3. Related Articles:**
-- AI layer suggests relevant articles/resources per concept
-- "Want to learn more about this? Read these articles..."
-
-**4. Progress Graphs:**
-- Line chart showing accuracy over time
-- Session frequency heatmap
+**Why This Works:**
+- ✅ No button clutter
+- ✅ Primary action is obvious
+- ✅ Advanced users discover secondary actions naturally
+- ✅ Clean, professional appearance
+- ✅ Follows modern UX patterns (Gmail compose, Notion actions, etc.)
 
 ---
 
-### 3️⃣ **CONTENT DUMP** — Not a Page, a Feature
+## 📐 Implementation Specs
 
-**Location:** Lives inside Knowledge Base as left sidebar  
-**Purpose:** Tag-based filtering of concepts
+### Location 1: Cockpit - Topic Card
 
-#### Why Not a Separate Page?
-1. **Redundancy:** Content Dump currently duplicates Knowledge Base functionality
-2. **User Mental Model:** Users think in concepts, not "dumps of content"
-3. **Efficiency:** Filtering is more powerful when embedded in the main view
-
-#### What Happens to Current `/content-dump` Route?
-**Option A (Recommended):** Redirect to `/knowledge-base`
-```typescript
-// app/content-dump/page.tsx
-import { redirect } from 'next/navigation'
-export default function ContentDumpPage() {
-  redirect('/knowledge-base')
-}
+**Current Card:**
+```
+┌─────────────────────────────────┐
+│ python                          │
+│ 5 concepts                      │
+│ Last practiced Today            │
+│ 0/5 sessions (0%)               │
+│ Average                         │
+└─────────────────────────────────┘
 ```
 
-**Option B:** Keep as legacy route but show same content as Knowledge Base
-```typescript
-// Share the same component
-import KnowledgeBasePage from '../knowledge-base/page'
-export default KnowledgeBasePage
+**New Card with Level Badge:**
 ```
+┌─────────────────────────────────┐
+│ python              [Beginner] │  ← Level badge
+│ 5 concepts                      │
+│ Last practiced Today            │
+│ 0/5 sessions (0%)               │
+│ Average                         │
+└─────────────────────────────────┘
+```
+
+**Level Badge Styling:**
+- Small rounded pill badge
+- Position: Top-right corner of card
+- Colors:
+  - Beginner: Blue/Cyan (`bg-blue-100 text-blue-700`)
+  - Intermediate: Orange/Amber (`bg-orange-100 text-orange-700`)
+  - Expert: Purple/Indigo (`bg-purple-100 text-purple-700`)
+- Font: Small, medium weight
+- Example: `[Beginner]` or `[Expert]`
 
 ---
 
-## 🗺️ Revised Navigation Structure
+### Location 2: Cockpit - Topic Modal (Enhanced)
 
-### Sidebar:
-```
-┌─────────────────────┐
-│ 🏠 Home             │ → `/`
-│ 📊 Cockpit          │ → `/cockpit` (active topics)
-│ 🧠 Knowledge Base   │ → `/knowledge-base` (all concepts)
-│ 🎓 Classroom  Soon  │ → `/classroom` (disabled)
-├─────────────────────┤
-│ 🌓 Theme            │
-│ 🚪 Logout           │
-└─────────────────────┘
-```
-
-**Removed:** Content Dump as a separate nav item
-
----
-
-## 📐 Information Architecture
+**Scenario A: First Time (No Quiz Taken Yet)**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    USER MENTAL MODEL                     │
+│  python - Topic Progress                         [✕]   │
 ├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  "What am I learning overall?"                          │
-│  └── COCKPIT (4 topics, high-level stats)              │
-│                                                          │
-│  "How well do I know each concept?"                     │
-│  └── KNOWLEDGE BASE (47 concepts, deep analytics)      │
-│                                                          │
-│  "What did I learn today?"                              │
-│  └── HOME (add new topic / take quiz)                  │
-│                                                          │
-│  "What should I review?"                                │
-│  └── COCKPIT → Priority Review                         │
-│                                                          │
-│  "How's my Python going?"                               │
-│  └── KNOWLEDGE BASE → Filter by Python                 │
-│                                                          │
+│  LEVEL: Beginner        TIMEFRAME: 2 weeks             │
+│  OVERALL STATUS: Not started yet                       │
+├─────────────────────────────────────────────────────────┤
+│  📊 Concept Performance                                │
+│  [Concepts list...]                                    │
+├─────────────────────────────────────────────────────────┤
+│  🎯 Quick Actions                                      │
+│                                                         │
+│  ┌────────────────────┐                               │
+│  │ 📝 Start Topic Quiz │  ← Primary action            │
+│  └────────────────────┘                               │
+│                                                         │
+│  [📊 View Quiz History] (disabled, grayed out)         │
 └─────────────────────────────────────────────────────────┘
 ```
 
----
+**Scenario B: After First Quiz (Quiz History Exists)**
 
-## 🎨 Design System Consistency
-
-### Color Coding (Memory Score):
-- **🔴 Weak (<40%):** Red gradient, urgent indicator
-- **🟡 Average (40-70%):** Yellow/amber gradient, caution
-- **🟢 Strong (>70%):** Green gradient, positive reinforcement
-
-### Card Hierarchy:
-1. **Cockpit → Topic Cards:**
-   - Larger, prominent
-   - Shows aggregate concept count
-   - CTA: "Continue Learning"
-
-2. **Knowledge Base → Concept Cards:**
-   - Medium size, scannable
-   - Shows individual concept stats
-   - CTA: "View Sessions" / "Quiz Again"
-
-### Typography:
-- **Page Titles:** text-3xl font-bold
-- **Card Titles:** text-xl font-semibold
-- **Stats:** text-2xl font-bold (numbers), text-sm text-muted (labels)
-- **Body:** text-sm
-
----
-
-## 🚀 Implementation Checklist
-
-### Phase 1: Core Restructure
-- [ ] Create `/knowledge-base` route
-- [ ] Build concept card component
-- [ ] Build filter sidebar (tags, sort)
-- [ ] Implement concept search
-- [ ] Migrate Content Dump functionality into Knowledge Base sidebar
-- [ ] Update Cockpit to be topic-only (remove Knowledge Base panel)
-
-### Phase 2: Detail Views
-- [ ] Build concept detail modal
-- [ ] Show quiz session history per concept
-- [ ] Build session timeline view
-- [ ] Add "Quiz Again" functionality (filter quiz by concept)
-
-### Phase 3: Polish
-- [ ] Add loading states
-- [ ] Add empty states ("No concepts yet")
-- [ ] Add animations (card hover, modal transitions)
-- [ ] Responsive design for mobile
-
-### Phase 4: Future Enhancements (Post-MVP)
-- [ ] Voice answer input
-- [ ] Keyword extraction and tracking
-- [ ] Auto-generated notes from answers
-- [ ] AI-suggested articles per concept
-- [ ] Progress graphs (accuracy over time)
-- [ ] Heatmap of study patterns
-
----
-
-## 🔄 User Flows Updated
-
-### Flow 1: Check Overall Progress
 ```
-Login → Cockpit → See 4 topics with memory scores
-                → See Priority Review list
-                → Click "Review" on weak topic
-                → Take quiz
-                → Return to Cockpit
+┌─────────────────────────────────────────────────────────┐
+│  python - Topic Progress                         [✕]   │
+├─────────────────────────────────────────────────────────┤
+│  LEVEL: Beginner        TIMEFRAME: 2 weeks             │
+│  OVERALL STATUS: 65% retention                         │
+├─────────────────────────────────────────────────────────┤
+│  📊 Concept Performance                                │
+│  [Concepts list with scores...]                        │
+├─────────────────────────────────────────────────────────┤
+│  🎯 Quick Actions                                      │
+│                                                         │
+│  ┌─────────────────────────────────────────┐          │
+│  │ ♻️ Redo Quiz (same questions)   🎲     │          │
+│  └─────────────────────────────────────────┘          │
+│       ↑ Primary button              ↑ Icon            │
+│                                     (hover shows       │
+│                                      tooltip)          │
+│                                                         │
+│  [📊 View Quiz History]  ← Now enabled                │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Flow 2: Deep Dive into Concepts
+**Button Group Breakdown:**
+
+**Primary Button:**
+- Text: "♻️ Redo Quiz (same questions)" OR "📝 Redo Topic Quiz"
+- Action: Retakes last quiz with identical questions
+- Style: Primary button (green/teal accent)
+- Full clickable area
+
+**Icon Button (attached to primary):**
+- Icon: 🎲 (dice emoji) or `<Dices />` from lucide-react
+- Position: Right edge of primary button OR immediately adjacent
+- Style: Ghost button / icon button
+- Hover state: Shows tooltip
+- Tooltip text: "Regenerate questions and start new quiz"
+- Action: Calls AI to generate fresh questions, then starts quiz
+
+**Visual Layout Options:**
+
+**Option A: Inline Icon (Recommended)**
 ```
-Login → Knowledge Base → Browse all 47 concepts
-                       → Filter by "Coding" tag
-                       → See 15 coding concepts
-                       → Click "View Sessions" on weak concept
-                       → See quiz history
-                       → Click "Quiz Again"
-                       → Take targeted quiz
+┌─────────────────────────────────────────┐
+│ ♻️ Redo Quiz (same questions)      🎲  │
+│     ↑ Primary action        Icon ↑     │
+└─────────────────────────────────────────┘
 ```
 
-### Flow 3: Tag-Based Discovery
+**Option B: Split Button**
 ```
-Knowledge Base → Click "Science" filter
-               → See 8 science concepts
-               → Sort by "Weak First"
-               → Identify struggling concepts
-               → Click "Quiz Again" on weakest
-               → Focus study session
+┌──────────────────────────────┬────┐
+│ ♻️ Redo Quiz                 │ 🎲 │
+│     ↑ Primary action    Icon ↑│   │
+└──────────────────────────────┴────┘
 ```
 
-### Flow 4: Search for Specific Concept
+**Option C: Icon Adjacent**
 ```
-Knowledge Base → Type "variables" in search
-               → See "Variables and Data Types" concept
-               → Click to expand
-               → View detailed stats
-               → Quiz if needed
+┌─────────────────────────────────┐  ┌───┐
+│ ♻️ Redo Quiz (same questions)   │  │🎲 │
+└─────────────────────────────────┘  └───┘
+    ↑ Primary button                  ↑ Icon
 ```
+
+**Recommended: Option A (Inline)**  
+Clean, compact, icon is part of the action group
 
 ---
 
-## 📊 Data Requirements
+### Location 3: Knowledge Base - Concept Card
 
-### New Fields Needed:
+**Current:**
+```
+┌─────────────────────────────────────────┐
+│ 💡 Variables and Data Types       85% │
+│ from Python                            │
+│                                         │
+│ [Quiz Performance Details...]          │
+│                                         │
+│ [Quiz Again →]                         │
+└─────────────────────────────────────────┘
+```
 
-**Concept:**
+**New Design:**
+```
+┌─────────────────────────────────────────┐
+│ 💡 Variables and Data Types       85% │
+│ from Python                            │
+│                                         │
+│ [Quiz Performance Details...]          │
+│                                         │
+│ ┌─────────────────────────────────┐   │
+│ │ 📝 Quiz This Concept       🎲  │   │
+│ └─────────────────────────────────┘   │
+│     ↑ Primary              ↑ Regen    │
+│                                         │
+│ [View All History]                     │
+└─────────────────────────────────────────┘
+```
+
+**Button Details:**
+
+**Primary Action:**
+- Text: "📝 Quiz This Concept" or "🎯 Quiz This Concept"
+- Action: Starts concept quiz with existing questions (mix of new, missed, review)
+- Style: Primary/accent button
+
+**Regenerate Icon:**
+- Icon: 🎲 dice emoji or `<RefreshCw />` from lucide-react
+- Position: Right edge of button
+- Hover tooltip: "Generate new questions for this concept"
+- Action: Regenerate 10 new questions for this concept, then start quiz
+
+---
+
+## 🎨 Icon Choice & Styling
+
+### Recommended Icons
+
+**For Regenerate Action:**
+
+**Option 1: 🎲 Dice Emoji** (Recommended)
+- Pros: Universal "random/shuffle" symbol, playful, recognizable
+- Cons: May vary by OS/browser
+- When to use: Casual, friendly UI
+
+**Option 2: `<RefreshCw />` (Lucide React)**
+- Pros: Professional, clear "refresh" meaning, consistent rendering
+- Cons: Less distinctive
+- When to use: Professional, serious UI
+
+**Option 3: `<Shuffle />` (Lucide React)**
+- Pros: Clearly communicates "mixing things up"
+- Cons: Might be confused with reordering
+- When to use: When "shuffle questions" makes sense
+
+**Option 4: `<Sparkles />` (Lucide React)**
+- Pros: Suggests "new/fresh/AI-generated"
+- Cons: Might be too abstract
+- When to use: Emphasizing AI generation
+
+**Our Recommendation: 🎲 Dice Emoji for MVP, switch to `<RefreshCw />` later if needed**
+
+### Icon Styling Specs
+
 ```typescript
-interface Concept {
-  id: string
-  text: string
-  topicId: string // Parent topic
-  status: 'strong' | 'average' | 'weak'
+// Example using shadcn/ui Button component
+
+<div className="flex gap-2 items-center">
+  {/* Primary action */}
+  <Button 
+    variant="default" 
+    className="flex-1"
+    onClick={handleRedoQuiz}
+  >
+    ♻️ Redo Quiz (same questions)
+  </Button>
   
-  // Analytics
-  timesReviewed: number // Count of quiz sessions
-  accuracy: number // Overall accuracy %
-  lastQuizDate: Date
-  
-  // Future
-  keywords: string[] // For keyword tracking
-  mentionedKeywords: string[] // Keywords found in answers
-  notes?: string // AI-generated summary
-  relatedArticles?: Article[]
+  {/* Regenerate icon */}
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleRegenerateQuiz}
+          className="shrink-0"
+        >
+          🎲
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Regenerate questions and start new quiz</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+</div>
+```
+
+**Visual Specs:**
+- Icon size: `h-5 w-5` (20px)
+- Icon button size: `h-10 w-10` (40px square)
+- Hover state: Slight background color change
+- Tooltip: Appears after 300ms hover
+- Tooltip style: Dark background, white text, rounded corners
+- Animation: Smooth fade-in (150ms)
+
+---
+
+## 📱 Responsive Behavior
+
+### Desktop (≥768px)
+- Show primary button + icon inline
+- Tooltip on hover
+- Full button text
+
+### Mobile (<768px)
+- Stack buttons vertically OR
+- Show icon button as separate row
+- Tooltip on tap (with close on second tap)
+- Consider shorter button text: "Redo Quiz" instead of "Redo Quiz (same questions)"
+
+---
+
+## 🎯 Interaction States
+
+### Icon Button States
+
+**Default (not hovered):**
+- Icon visible at ~80% opacity
+- Subtle gray color
+- No background
+
+**Hover:**
+- Icon 100% opacity
+- Background appears (subtle gray/accent)
+- Cursor: pointer
+- Tooltip appears after 300ms
+
+**Active (clicked):**
+- Brief scale animation (0.95)
+- Ripple effect (optional)
+- Loading spinner if action takes time
+
+**Disabled:**
+- Icon 40% opacity
+- Gray color
+- Cursor: not-allowed
+- Tooltip: "Complete a quiz first"
+
+---
+
+## 🔄 User Flows
+
+### Flow 1: First Time User
+
+```
+1. User creates "Python" topic
+2. Topic card shows [Beginner] badge
+3. User clicks topic card
+4. Modal opens with "Start Topic Quiz" button only
+5. User clicks "Start Topic Quiz"
+6. Quiz begins with AI-generated questions
+7. After quiz, modal now shows:
+   - "Redo Quiz" button + 🎲 icon
+   - "View Quiz History" enabled
+```
+
+### Flow 2: Redo Same Quiz
+
+```
+1. User opens topic modal
+2. Clicks "Redo Quiz (same questions)"
+3. Confirmation: "Retake quiz with same 10 questions?"
+4. Quiz starts with identical questions from last attempt
+5. After completion, can compare scores
+```
+
+### Flow 3: Regenerate Questions
+
+```
+1. User opens topic modal
+2. Hovers over 🎲 icon
+3. Tooltip: "Regenerate questions and start new quiz"
+4. Clicks 🎲 icon
+5. Confirmation: "Generate new questions? This will replace current question set."
+6. AI generates fresh 10 questions per concept
+7. Quiz starts with new questions
+8. Old questions archived in history
+```
+
+### Flow 4: Concept-Level Quiz
+
+```
+1. User navigates to Knowledge Base
+2. Sees concept card with "Quiz This Concept" + 🎲
+3. Clicks primary button → quiz starts with existing questions
+   OR
+4. Clicks 🎲 icon → regenerates questions for this specific concept
+5. Quiz begins (5-10 questions, all from this concept)
+```
+
+---
+
+## 💬 Tooltip Copy
+
+### For Regenerate Icon (🎲)
+
+**Location: Topic Modal**
+- Tooltip: "Generate new questions"
+- Subtext: "Start quiz with fresh questions"
+
+**Location: Concept Card**
+- Tooltip: "Regenerate questions for this concept"
+- Subtext: "Get 10 new questions"
+
+**Variations by Context:**
+
+**Short & Simple:**
+- "Generate new questions"
+
+**Descriptive:**
+- "Regenerate questions and start new quiz"
+
+**Informative:**
+- "Generate new questions • Old questions saved in history"
+
+**Recommended: Short & Simple for MVP**
+
+---
+
+## ⚠️ Confirmation Dialogs
+
+### When Regenerating Questions
+
+**Title:** "Regenerate Questions?"
+
+**Message:** 
+"This will generate 10 new questions for each concept. Your current questions will be saved in history."
+
+**Actions:**
+- "Cancel" (secondary)
+- "Generate & Start Quiz" (primary, accent color)
+
+**Why Confirmation:**
+- Destructive action (replaces question set)
+- Uses AI credits/rate limits
+- User might click accidentally
+- Sets clear expectation
+
+---
+
+## 🎨 Visual Examples (Text-Based Mockups)
+
+### Example 1: Topic Modal After First Quiz
+
+```
+┌──────────────────────────────────────────────────────┐
+│  python - Topic Progress                      [✕]   │
+├──────────────────────────────────────────────────────┤
+│                                                       │
+│  LEVEL: Beginner             TIMEFRAME: 2 weeks     │
+│  PACE: 10 min/day            STATUS: 65% 🟡         │
+│                                                       │
+├──────────────────────────────────────────────────────┤
+│  📊 Concept Performance                              │
+│                                                       │
+│  💡 Variables          85% 🟢  [Quiz This →]        │
+│  🎯 Loops              45% 🔴  [Quiz This →]        │
+│  🔧 Functions          72% 🟡  [Quiz This →]        │
+│                                                       │
+├──────────────────────────────────────────────────────┤
+│  🎯 Quick Actions                                    │
+│                                                       │
+│  ┌───────────────────────────────────────────┐      │
+│  │  ♻️ Redo Quiz (same questions)       🎲  │      │
+│  └───────────────────────────────────────────┘      │
+│        ↑ Retakes last quiz           ↑ Regen       │
+│                                                       │
+│  [📊 View Quiz History]                             │
+│                                                       │
+└──────────────────────────────────────────────────────┘
+```
+
+### Example 2: Knowledge Base Concept Card
+
+```
+┌──────────────────────────────────────────────────────┐
+│  💡 Variables and Data Types                   85% 🟢│
+│  from Python                                         │
+│                                                       │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  📊 Quiz Performance                         │   │
+│  │  Total Attempts: 5                           │   │
+│  │  Last Quiz: 2 days ago                       │   │
+│  │  Average Score: 8.4/10                       │   │
+│  │                                               │   │
+│  │  Recent: Feb 20: 9/10 ✅  Feb 18: 8/10 ✅   │   │
+│  └──────────────────────────────────────────────┘   │
+│                                                       │
+│  ┌───────────────────────────────────────────┐      │
+│  │  📝 Quiz This Concept              🎲     │      │
+│  └───────────────────────────────────────────┘      │
+│        ↑ Start quiz                  ↑ Regen        │
+│                                                       │
+│  [View All History]                                  │
+│                                                       │
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔧 Technical Implementation Notes
+
+### State Management
+
+```typescript
+interface TopicQuizState {
+  hasCompletedQuiz: boolean;      // Has user taken topic quiz?
+  lastQuizId: string | null;       // ID of most recent quiz
+  questionSetId: string;           // Current question set
+  canRegenerate: boolean;          // Rate limit check
+}
+
+interface ConceptQuizState {
+  conceptId: string;
+  hasQuestions: boolean;           // Questions generated?
+  lastAttemptDate: Date | null;
+  canRegenerate: boolean;
 }
 ```
 
-**QuizSession (per concept):**
+### Button Visibility Logic
+
 ```typescript
-interface QuizSession {
-  id: string
-  conceptId: string
-  topicId: string
-  sessionDate: Date
-  
-  questions: {
-    question: string
-    userAnswer: string
-    correctAnswer: string
-    isCorrect: boolean
-    keywords?: string[] // Future: extracted keywords
-  }[]
-  
-  score: number
-  accuracy: number
-}
+// Topic Modal
+const showStartQuiz = !topic.hasCompletedQuiz;
+const showRedoQuiz = topic.hasCompletedQuiz;
+const showRegenerateIcon = topic.hasCompletedQuiz && topic.canRegenerate;
+
+// Concept Card
+const showQuizButton = concept.hasQuestions;
+const showRegenerateIcon = concept.hasQuestions && concept.canRegenerate;
 ```
+
+### Rate Limiting for Regenerate
+
+```typescript
+// Prevent spam regeneration (costs AI credits)
+const canRegenerate = () => {
+  const lastRegenTime = getLastRegenerateTime(topicId);
+  const hoursSinceRegen = (Date.now() - lastRegenTime) / (1000 * 60 * 60);
+  
+  // Allow regen if:
+  // - Never regenerated, OR
+  // - More than 1 hour since last regen
+  return !lastRegenTime || hoursSinceRegen >= 1;
+};
+```
+
+---
+
+## ✅ Implementation Checklist
+
+### Phase 1: Topic Card Enhancement
+- [ ] Add level badge to topic card
+- [ ] Position badge in top-right corner
+- [ ] Style badges by level (blue/orange/purple)
+- [ ] Test responsive layout
+
+### Phase 2: Topic Modal - First Time State
+- [ ] Show "Start Topic Quiz" button when no quiz history
+- [ ] Disable "View Quiz History" button initially
+- [ ] Add empty state messaging
+
+### Phase 3: Topic Modal - After First Quiz
+- [ ] Change button to "Redo Quiz (same questions)"
+- [ ] Add 🎲 regenerate icon inline with button
+- [ ] Implement tooltip on icon hover
+- [ ] Add confirmation dialog for regenerate
+- [ ] Enable "View Quiz History" button
+
+### Phase 4: Knowledge Base Concept Cards
+- [ ] Update "Quiz Again" to "Quiz This Concept"
+- [ ] Add 🎲 regenerate icon
+- [ ] Implement tooltip
+- [ ] Add regenerate confirmation
+- [ ] Test icon interaction states
+
+### Phase 5: Regenerate Functionality
+- [ ] API call to generate new questions
+- [ ] Replace questions in storage
+- [ ] Archive old questions to history
+- [ ] Show loading state during generation
+- [ ] Handle API errors gracefully
+
+### Phase 6: Polish
+- [ ] Add smooth transitions
+- [ ] Test tooltip positioning (doesn't overflow)
+- [ ] Add hover/active states
+- [ ] Test on mobile (tooltips on tap)
+- [ ] Accessibility: keyboard navigation, screen readers
+
+---
+
+## 📏 Design Specifications Summary
+
+| Element | Spec |
+|---------|------|
+| **Level Badge** | Small pill, colored by level, top-right of card |
+| **Primary Button** | Full-width button, accent color, clear action text |
+| **Regenerate Icon** | 🎲 or `<RefreshCw />`, 20px, ghost button style |
+| **Tooltip** | Dark bg, white text, 300ms delay, smooth fade |
+| **Icon Hover** | Background appears, opacity increases |
+| **Confirmation** | Dialog with clear message, primary + secondary actions |
+| **Mobile** | Stack buttons or show icon separately, tap for tooltip |
 
 ---
 
 ## 🎯 Success Metrics
 
-After implementing this structure, measure:
-
-1. **Engagement:**
-   - % of users who visit Knowledge Base vs Cockpit
-   - Time spent in Knowledge Base
-   - Filter usage frequency
-
-2. **Learning Outcomes:**
-   - Concept accuracy improvement over time
-   - Weak concept → strong concept conversion rate
-   - Session frequency per concept
-
-3. **UX:**
-   - Search usage rate
-   - Tag filter usage rate
-   - Concept detail modal open rate
+After implementation, measure:
+- % of users who discover regenerate icon (hover/click rate)
+- % of users who use redo vs regenerate
+- Time to first regenerate action (should be discoverable within 2-3 sessions)
+- User feedback on button clarity
 
 ---
 
-## 💡 Key Takeaways
-
-### What Changed:
-1. **Cockpit:** Simplified to topic-level overview only
-2. **Knowledge Base:** New page for concept-deep-dive
-3. **Content Dump:** Absorbed into Knowledge Base as filtering feature
-
-### Why This Works:
-1. **Mental Model Alignment:** Topics are few, concepts are many
-2. **Progressive Disclosure:** High-level → detailed, as needed
-3. **Reduced Redundancy:** One place for concept analytics
-4. **Scalability:** Filters/search handle growth better than separate pages
-
-### The Subtle Reinforcement:
-By making concepts more visible and accessible than topics, users will:
-- Think in terms of concepts naturally
-- Focus on concept mastery
-- Understand topics as containers, not the core unit
-- Develop a habit of concept-level self-assessment
-
-This unconsciously trains better learning behavior. 🧠
-
----
-
-## 🎬 Next Steps
-
-1. Review this document with stakeholders
-2. Create high-fidelity mockups in Figma (optional)
-3. Build `/knowledge-base` route first
-4. Migrate existing Content Dump components
-5. Update Cockpit to remove Knowledge Base panel
-6. Test with real user data
-7. Iterate based on usage patterns
-
----
-
-**End of Document**
-
-Questions? Ambiguities? Refer back to the Master Context Document's principle:
-> "Use common sense. Choose the simpler path. Make it work, then make it better."
-
-Let's build the second brain students deserve. 🚀
+**This design balances simplicity with power - primary actions are obvious, advanced actions are discoverable. Clean, professional, scalable.** ✨
