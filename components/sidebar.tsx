@@ -21,7 +21,7 @@ const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/cockpit', label: 'Cockpit', icon: Activity },
     { href: '/knowledge-base', label: 'Knowledge Base', icon: Brain },
-    { href: '/classroom', label: 'Classroom', icon: GraduationCap, disabled: true },
+    { href: '/classroom', label: 'Classroom', icon: GraduationCap },
 ];
 
 export function Sidebar() {
